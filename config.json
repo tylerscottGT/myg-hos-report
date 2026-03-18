@@ -1,0 +1,16 @@
+{
+  "name": "driverHOSReport",
+  "version": "1.0.0",
+  "supportEmail": "tylerscott@geotab.com",
+  "items": [
+    {
+      "url": "https://tylerscottgt.github.io/myg-hos-report/index.html",
+      "path": "ComplianceId/",
+      "menuName": {
+        "en": "Driver HOS Weekly Report"
+      }
+    }
+  ],
+  "files": {},
+  "isSigned": false
+}
