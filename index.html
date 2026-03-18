@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Driver HOS Report</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
+      color: #212529;
+      background: #f0f2f5;
+    }
+
+    #hos-app { padding: 16px 20px; max-width: 100%; }
+
+    /* ── Page header ── */
+    .hos-page-header { margin-bottom: 14px; }
+    .hos-page-header h1 { font-size: 20px; font-weight: 700; color: #003764; line-height: 1.2; }
+    .hos-page-header p  { font-size: 12px; color: #6c757d; margin-top: 3px; }
+
+    /* ── Cards ── */
+    .hos-card {
+      background: #fff;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+
+    /* ── Section labels ── */
+    .hos-section-label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: #6c757d; margin-bottom: 8px;
+    }
+
+    /* ── Preset button group ── */
+    .hos-preset-group { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .hos-preset-btn {
+      padding: 6px 14px; border-radius: 20px; border: 1.5px solid #ced4da;
+      background: #fff; color: #495057; cursor: pointer; font-size: 12.5px;
+      font-weight: 500; transition: all .15s; white-space: nowrap;
+    }
+    .hos-preset-btn:hover:not(:disabled) { border-color: #0075BE; color: #0075BE; background: #f0f8ff; }
+    .hos-preset-btn.active { background: #0075BE; border-color: #0075BE; color: #fff; font-weight: 600; }
+    .hos-preset-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── Custom date row ── */
+    .hos-custom-row {
+      display: flex; align-items: flex-end; flex-wrap: wrap; gap: 12px;
+      padding: 14px 16px; background: #f8f9fa; border: 1px solid #dee2e6;
+      border-radius: 6px; margin-bottom: 14px;
+    }
+    .hos-date-field { display: flex; flex-direction: column; gap: 4px; }
+    .hos-date-field label { font-size: 11px; font-weight: 600; color: #495057; }
+    .hos-date-field input[type="date"] {
+      padding: 6px 10px; border: 1.5px solid #ced4da; border-radius: 5px;
+      font-size: 13px; color: #212529; background: #fff; cursor: pointer;
+    }
+    .hos-date-field input[type="date"]:focus {
+      outline: none; border-color: #0075BE; box-shadow: 0 0 0 3px rgba(0,117,190,.12);
+    }
+
+    /* ── Range chip ── */
+    .hos-range-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #e8f4fd; border: 1px solid #b8daff; border-radius: 20px;
+      padding: 4px 12px; font-size: 12.5px; font-weight: 600; color: #004085;
+      margin-bottom: 14px;
+    }
+    .hos-range-chip span { opacity: .7; font-weight: 400; }
+
+    /* ── Action row ── */
+    .hos-action-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+
+    /* ── Buttons ── */
+    .hos-btn {
+      padding: 7px 16px; border-radius: 5px; border: 1.5px solid #ced4da;
+      background: #fff; color: #495057; cursor: pointer; font-size: 13px;
+      font-weight: 500; transition: all .15s; white-space: nowrap;
+    }
+    .hos-btn:hover:not(:disabled) { background: #f1f3f5; border-color: #adb5bd; }
+    .hos-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .hos-btn-sm { padding: 5px 12px; font-size: 12px; }
+
+    .hos-btn-primary { background: #003764; border-color: #003764; color: #fff; font-weight: 600; }
+    .hos-btn-primary:hover:not(:disabled) { background: #002a4d; border-color: #002a4d; }
+
+    .hos-btn-success { background: #28a745; border-color: #28a745; color: #fff; font-weight: 600; }
+    .hos-btn-success:hover:not(:disabled) { background: #218838; border-color: #218838; }
+
+    /* ── Status bar ── */
+    .hos-status {
+      padding: 10px 14px; border-radius: 6px; margin-bottom: 12px;
+      font-size: 13px; display: none; align-items: center; gap: 8px;
+    }
+    .hos-status-loading { background: #cce5ff; border: 1px solid #b8daff; color: #004085; display: flex; }
+    .hos-status-success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; display: flex; }
+    .hos-status-error   { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; display: flex; }
+    .hos-spinner {
+      width: 14px; height: 14px; border: 2px solid currentColor;
+      border-right-color: transparent; border-radius: 50%;
+      animation: spin .6s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Record count ── */
+    .hos-record-count { font-size: 12px; color: #6c757d; font-style: italic; }
+
+    /* ── Tabs ── */
+    .hos-tabs { display: flex; gap: 0; margin-bottom: -1px; }
+    .hos-tab {
+      padding: 8px 20px; border: 1px solid #dee2e6; border-bottom: none;
+      background: #e9ecef; color: #6c757d; cursor: pointer; font-size: 13px;
+      font-weight: 500; border-radius: 6px 6px 0 0; transition: background .15s;
+    }
+    .hos-tab:hover { background: #dde0e3; }
+    .hos-tab.active { background: #fff; color: #003764; font-weight: 700; border-bottom-color: #fff; }
+
+    /* ── Table container ── */
+    .hos-table-wrap {
+      background: #fff; border: 1px solid #dee2e6; border-radius: 0 8px 8px 8px;
+      overflow: auto; max-height: calc(100vh - 300px);
+    }
+    .hos-table-note {
+      padding: 8px 14px; background: #fff8e1; border-bottom: 1px solid #ffe082;
+      font-size: 11.5px; color: #795548;
+    }
+    .hos-empty { padding: 40px; text-align: center; color: #6c757d; font-style: italic; }
+
+    /* ── Data table ── */
+    .hos-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .hos-table thead { position: sticky; top: 0; z-index: 2; }
+    .hos-table th {
+      background: #003764; color: #fff; padding: 9px 11px; text-align: left;
+      font-weight: 600; white-space: nowrap; border-right: 1px solid #1a4a78;
+    }
+    .hos-table th:last-child { border-right: none; }
+    .hos-table td { padding: 6px 11px; border-bottom: 1px solid #f1f3f5; white-space: nowrap; }
+    .hos-table tbody tr:nth-child(even) { background: #f8f9fa; }
+    .hos-table tbody tr:hover { background: #e8f4fd; }
+
+    .hos-num { text-align: right; font-variant-numeric: tabular-nums; font-family: 'Courier New', monospace; font-size: 12px; }
+    .hos-total { font-weight: 700; color: #003764; }
+    .hos-driver-cell { font-weight: 500; }
+
+    /* ── Status badges ── */
+    .hos-badge { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+    .hos-badge-OFF { background: #e2e3e5; color: #383d41; }
+    .hos-badge-SB  { background: #e2d9f3; color: #4a235a; }
+    .hos-badge-D   { background: #d4edda; color: #155724; }
+    .hos-badge-ON  { background: #fff3cd; color: #856404; }
+    .hos-badge-YM  { background: #d1ecf1; color: #0c5460; }
+    .hos-badge-PC  { background: #cce5ff; color: #004085; }
+  </style>
+</head>
+<body>
+<div id="hos-app">
+
+  <div class="hos-page-header">
+    <h1>Driver HOS Report</h1>
+    <p>Duty status breakdown &mdash; HOS-enabled drivers only (Drive App with availability calculations)</p>
+  </div>
+
+  <div class="hos-card">
+    <div class="hos-section-label">Date Range</div>
+
+    <div class="hos-preset-group">
+      <button class="hos-preset-btn active" data-preset="lastWeek">Last Week</button>
+      <button class="hos-preset-btn" data-preset="thisWeek">This Week</button>
+      <button class="hos-preset-btn" data-preset="thisMonth">This Month</button>
+      <button class="hos-preset-btn" data-preset="lastMonth">Last Month</button>
+      <button class="hos-preset-btn" data-preset="custom">Custom Range</button>
+    </div>
+
+    <div id="hos-custom-row" class="hos-custom-row" style="display:none">
+      <div class="hos-date-field">
+        <label for="hos-start-date">Start Date</label>
+        <input type="date" id="hos-start-date">
+      </div>
+      <div class="hos-date-field">
+        <label for="hos-end-date">End Date</label>
+        <input type="date" id="hos-end-date">
+      </div>
+      <button id="hos-apply-btn" class="hos-btn hos-btn-sm">Apply</button>
+    </div>
+
+    <div id="hos-range-chip" class="hos-range-chip">
+      <span>Range:</span> <strong id="hos-range-label">&mdash;</strong>
+    </div>
+
+    <div class="hos-action-row">
+      <button id="hos-run-btn" class="hos-btn hos-btn-primary">&#9654; Run Report</button>
+      <button id="hos-download-btn" class="hos-btn hos-btn-success" disabled>&#11015; Download Excel</button>
+      <span id="hos-record-count" class="hos-record-count"></span>
+    </div>
+  </div>
+
+  <div id="hos-status" class="hos-status"></div>
+
+  <div class="hos-tabs">
+    <button id="hos-tab-summary" class="hos-tab active">Weekly Summary</button>
+    <button id="hos-tab-detail" class="hos-tab">Status Detail</button>
+  </div>
+
+  <div id="hos-summary-wrap" class="hos-table-wrap">
+    <p class="hos-empty">Select a date range and click <strong>Run Report</strong>.</p>
+  </div>
+  <div id="hos-detail-wrap" class="hos-table-wrap" style="display:none">
+    <p class="hos-empty">Select a date range and click <strong>Run Report</strong>.</p>
+  </div>
+
+</div>
+<script>
+/* global geotab, XLSX */
+geotab.addin.driverHOSReport = function (api, state) {
+  'use strict';
+
+  var STATUS_COLS   = ['OFF', 'SB', 'D', 'ON', 'YM', 'PC'];
+  var STATUS_LABELS = { OFF:'Off Duty', SB:'Sleeper Berth', D:'Driving', ON:'On Duty Not Driving', YM:'Yard Move', PC:'Personal Conveyance' };
+  var UNIDENTIFIED  = 'Unidentified Driver';
+  var RESULTS_LIMIT = 50000;
+  var MONTH_NAMES   = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var DAY_NAMES     = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  var activePreset = 'lastWeek';
+  var dateRange    = null;
+  var summaryRows  = [];
+  var detailRows   = [];
+  var xlsxReady    = false;
+
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
+  return {
+    initialize: function (fa, fs, cb) { api = fa; state = fs; loadSheetJS(function () { wireEvents(); selectPreset('lastWeek'); cb(); }); },
+    focus:      function (fa, fs)     { api = fa; state = fs; },
+    blur:       function ()           {}
+  };
+
+  // ── SheetJS ────────────────────────────────────────────────────────────────
+  function loadSheetJS(cb) {
+    if (window.XLSX) { xlsxReady = true; cb(); return; }
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    s.onload  = function () { xlsxReady = true;  cb(); };
+    s.onerror = function () { xlsxReady = false; cb(); };
+    document.head.appendChild(s);
+  }
+
+  // ── DOM helpers ────────────────────────────────────────────────────────────
+  function el(id) { return document.getElementById(id); }
+
+  function setStatus(type, msg) {
+    var div = el('hos-status');
+    div.className = 'hos-status hos-status-' + type;
+    div.innerHTML = type === 'loading'
+      ? '<div class="hos-spinner"></div><span>' + escHtml(msg) + '</span>'
+      : escHtml(msg);
+  }
+
+  function lockControls(lock) {
+    el('hos-run-btn').disabled   = lock;
+    el('hos-apply-btn').disabled = lock;
+    document.querySelectorAll('.hos-preset-btn').forEach(function (b) { b.disabled = lock; });
+  }
+
+  function switchTab(tab) {
+    el('hos-tab-summary').classList.toggle('active', tab === 'summary');
+    el('hos-tab-detail').classList.toggle('active',  tab === 'detail');
+    el('hos-summary-wrap').style.display = tab === 'summary' ? '' : 'none';
+    el('hos-detail-wrap').style.display  = tab === 'detail'  ? '' : 'none';
+  }
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Date helpers ───────────────────────────────────────────────────────────
+  function startOfDay(d)  { var r = new Date(d); r.setHours(0,0,0,0); return r; }
+  function addDays(d, n)  { var r = new Date(d); r.setDate(r.getDate() + n); return r; }
+  function thisMonday()   { var now = new Date(), dow = now.getDay(), r = startOfDay(now); r.setDate(r.getDate() - (dow === 0 ? 6 : dow - 1)); return r; }
+  function isoDate(d)     { return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+  function pad(n)         { return String(n).padStart(2,'0'); }
+  function displayDate(d) { var dt = typeof d === 'string' ? new Date(d + 'T00:00:00') : new Date(d); return (dt.getMonth()+1) + '/' + dt.getDate() + '/' + dt.getFullYear(); }
+  function displayTime(d) { var t = new Date(d); return pad(t.getHours()) + ':' + pad(t.getMinutes()); }
+
+  function formatHM(sec) {
+    if (!sec || sec < 30) return '\u2014';
+    return Math.floor(sec / 3600) + ':' + pad(Math.floor((sec % 3600) / 60));
+  }
+
+  function friendlyRange(start, end) {
+    var last = new Date(end.getTime() - 1);
+    var sameMonth = start.getFullYear() === last.getFullYear() && start.getMonth() === last.getMonth();
+    var s = DAY_NAMES[start.getDay()] + ', ' + MONTH_NAMES[start.getMonth()] + ' ' + start.getDate() + (start.getFullYear() !== last.getFullYear() ? ', ' + start.getFullYear() : '');
+    var e = DAY_NAMES[last.getDay()] + ', ' + (sameMonth ? '' : MONTH_NAMES[last.getMonth()] + ' ') + last.getDate() + ', ' + last.getFullYear();
+    return s + ' \u2013 ' + e;
+  }
+
+  var PRESETS = {
+    lastWeek:  function () { var m = thisMonday(); return { start: addDays(m,-7), end: m }; },
+    thisWeek:  function () { return { start: thisMonday(), end: new Date() }; },
+    thisMonth: function () { var n = new Date(); return { start: new Date(n.getFullYear(), n.getMonth(), 1), end: new Date() }; },
+    lastMonth: function () { var n = new Date(); return { start: new Date(n.getFullYear(), n.getMonth()-1, 1), end: new Date(n.getFullYear(), n.getMonth(), 1) }; }
+  };
+
+  // ── Preset / range selection ───────────────────────────────────────────────
+  function selectPreset(preset) {
+    activePreset = preset;
+    document.querySelectorAll('.hos-preset-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.preset === preset); });
+    if (preset === 'custom') {
+      el('hos-custom-row').style.display = '';
+      if (!el('hos-start-date').value) { var lw = PRESETS.lastWeek(); el('hos-start-date').value = isoDate(lw.start); el('hos-end-date').value = isoDate(new Date(lw.end.getTime() - 86400000)); }
+      applyCustomRange();
+    } else {
+      el('hos-custom-row').style.display = 'none';
+      dateRange = PRESETS[preset]();
+      el('hos-range-label').textContent = friendlyRange(dateRange.start, dateRange.end);
+    }
+    el('hos-download-btn').disabled = true;
+    el('hos-record-count').textContent = '';
+  }
+
+  function applyCustomRange() {
+    var sv = el('hos-start-date').value, ev = el('hos-end-date').value;
+    if (!sv || !ev) { el('hos-range-label').textContent = 'Please select both dates.'; return; }
+    var sp = sv.split('-'), ep = ev.split('-');
+    var start = new Date(+sp[0], +sp[1]-1, +sp[2], 0,0,0,0);
+    var end   = new Date(+ep[0], +ep[1]-1, +ep[2]+1, 0,0,0,0); // exclusive next day
+    if (end <= start) { el('hos-range-label').textContent = 'End date must be after start date.'; return; }
+    dateRange = { start: start, end: end };
+    el('hos-range-label').textContent = friendlyRange(start, end);
+  }
+
+  // ── API calls ──────────────────────────────────────────────────────────────
+  function fetchDrivers(callback) {
+    api.call('Get', { typeName: 'User', search: { isDriver: true }, resultsLimit: 10000 },
+      function (users) {
+        var map = {};
+        (users || []).forEach(function (u) {
+          // Only include drivers with an active HOS ruleset (Drive App users with availability)
+          if (!u.hosRuleSet || u.hosRuleSet === 'None') return;
+          map[u.id] = {
+            name: (u.lastName && u.firstName) ? u.lastName + ', ' + u.firstName : (u.name || u.id),
+            hosRuleSet: u.hosRuleSet
+          };
+        });
+        callback(null, map);
+      },
+      function (err) { callback(err.message || String(err)); }
+    );
+  }
+
+  function fetchLogs(start, end, callback) {
+    var fetchStart = addDays(start, -1); // one extra day for carry-over
+    var days = [], cursor = new Date(fetchStart);
+    while (cursor < end) { var nx = addDays(cursor,1); days.push({from:new Date(cursor),to:new Date(nx)}); cursor = nx; }
+
+    var all = [], idx = 0;
+    function next() {
+      if (idx >= days.length) { callback(null, all); return; }
+      var day = days[idx++];
+      setStatus('loading', 'Fetching data: day ' + idx + ' of ' + days.length + ' (' + displayDate(day.from) + ')\u2026');
+      api.call('Get', { typeName: 'DutyStatusLog', search: { fromDate: day.from.toISOString(), toDate: day.to.toISOString() }, resultsLimit: RESULTS_LIMIT },
+        function (r) { all = all.concat(r || []); next(); },
+        function (e) { callback(e.message || String(e)); }
+      );
+    }
+    next();
+  }
+
+  // ── Processing ─────────────────────────────────────────────────────────────
+  function processLogs(logs, driverMap, range) {
+    logs.sort(function (a,b) {
+      var dA=(a.driver&&a.driver.id)||'', dB=(b.driver&&b.driver.id)||'';
+      return dA!==dB ? (dA<dB?-1:1) : new Date(a.dateTime)-new Date(b.dateTime);
+    });
+
+    var byDriver = {};
+    logs.forEach(function (log) {
+      var dId = (log.driver && log.driver.id) || 'unidentified';
+      if (!byDriver[dId]) byDriver[dId] = [];
+      byDriver[dId].push(log);
+    });
+
+    var summaryMap = {}, detail = [], now = new Date();
+
+    Object.keys(byDriver).forEach(function (dId) {
+      // Skip drivers without an HOS ruleset (not in our map), except unidentified
+      if (dId !== 'unidentified' && !driverMap[dId]) return;
+
+      var driverLogs = byDriver[dId];
+      var driverName = dId === 'unidentified' ? UNIDENTIFIED : driverMap[dId].name;
+      summaryMap[dId] = { name: driverName, days: {} };
+
+      for (var i = 0; i < driverLogs.length; i++) {
+        var log      = driverLogs[i];
+        var logStart = new Date(log.dateTime);
+        var logEnd   = i < driverLogs.length-1 ? new Date(driverLogs[i+1].dateTime) : (range.end < now ? range.end : now);
+
+        var segStart = logStart < range.start ? new Date(range.start) : logStart;
+        var segEnd   = logEnd   > range.end   ? new Date(range.end)   : logEnd;
+        if (segEnd <= segStart) continue;
+
+        var status = log.status || 'OFF';
+        distributeToSummary(segStart, segEnd, status, summaryMap[dId].days);
+        detail.push({
+          driverName: driverName, date: isoDate(segStart), dateDisplay: displayDate(segStart),
+          startTime: displayTime(segStart), endTime: displayTime(segEnd),
+          status: status, statusLabel: STATUS_LABELS[status] || status,
+          durationSec: (segEnd - segStart) / 1000
+        });
+      }
+    });
+
+    var summary = [];
+    Object.keys(summaryMap).forEach(function (dId) {
+      var data = summaryMap[dId];
+      Object.keys(data.days).sort().forEach(function (dayKey) {
+        var bucket = data.days[dayKey], row = { driverName: data.name, date: dayKey }, total = 0;
+        STATUS_COLS.forEach(function (s) { row[s] = bucket[s] || 0; total += row[s]; });
+        row.total = total; summary.push(row);
+      });
+    });
+
+    summary.sort(function(a,b){ return a.driverName!==b.driverName?(a.driverName<b.driverName?-1:1):(a.date<b.date?-1:1); });
+    detail.sort(function(a,b){
+      if (a.driverName!==b.driverName) return a.driverName<b.driverName?-1:1;
+      if (a.date!==b.date) return a.date<b.date?-1:1;
+      return a.startTime<b.startTime?-1:1;
+    });
+    return { summary: summary, detail: detail };
+  }
+
+  function distributeToSummary(startDt, endDt, status, daysMap) {
+    var cursor = new Date(startDt), end = new Date(endDt);
+    while (cursor < end) {
+      var dayKey = isoDate(cursor), dayEnd = startOfDay(addDays(cursor,1));
+      var segEnd = end < dayEnd ? end : dayEnd, seconds = (segEnd - cursor) / 1000;
+      if (!daysMap[dayKey]) daysMap[dayKey] = {};
+      daysMap[dayKey][status] = (daysMap[dayKey][status] || 0) + seconds;
+      cursor = dayEnd;
+    }
+  }
+
+  // ── Rendering ──────────────────────────────────────────────────────────────
+  function renderSummaryTable(rows) {
+    var wrap = el('hos-summary-wrap');
+    if (!rows.length) { wrap.innerHTML = '<p class="hos-empty">No HOS records found.<br>Verify that HOS-enabled drivers were active during this range.</p>'; return; }
+
+    var html = '<div class="hos-table-note">&#9432;&nbsp; <strong>Total Tracked</strong> reflects only logged status time. Days may show less than 24 h if a driver had no active status record for part of the day.</div>' +
+      '<table class="hos-table"><thead><tr><th>Driver</th><th>Date</th>';
+    STATUS_COLS.forEach(function (s) { html += '<th>' + STATUS_LABELS[s] + '</th>'; });
+    html += '<th>Total Tracked</th></tr></thead><tbody>';
+
+    rows.forEach(function (row) {
+      html += '<tr><td class="hos-driver-cell">' + escHtml(row.driverName) + '</td><td>' + displayDate(row.date) + '</td>';
+      STATUS_COLS.forEach(function (s) {
+        html += '<td class="hos-num">' + (row[s] > 29 ? formatHM(row[s]) : '<span style="opacity:.3">\u2014</span>') + '</td>';
+      });
+      html += '<td class="hos-num hos-total">' + formatHM(row.total) + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+  }
+
+  function renderDetailTable(rows) {
+    var wrap = el('hos-detail-wrap');
+    if (!rows.length) { wrap.innerHTML = '<p class="hos-empty">No HOS records found.</p>'; return; }
+
+    var html = '<table class="hos-table"><thead><tr><th>Driver</th><th>Date</th><th>Start</th><th>End</th><th>Status</th><th>Duration</th></tr></thead><tbody>';
+    rows.forEach(function (row) {
+      html += '<tr><td class="hos-driver-cell">' + escHtml(row.driverName) + '</td><td>' + row.dateDisplay + '</td>' +
+        '<td style="font-family:monospace">' + row.startTime + '</td><td style="font-family:monospace">' + row.endTime + '</td>' +
+        '<td><span class="hos-badge hos-badge-' + row.status + '">' + escHtml(row.statusLabel) + '</span></td>' +
+        '<td class="hos-num">' + formatHM(row.durationSec) + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+  }
+
+  // ── Excel export ───────────────────────────────────────────────────────────
+  function downloadExcel() {
+    if (!xlsxReady || !window.XLSX) { alert('Excel library not loaded. Check your network and reload.'); return; }
+    var wb    = XLSX.utils.book_new();
+    var label = el('hos-range-label').textContent.replace(/[\/\\:*?"<>|]/g, '-');
+
+    var sAoa = [['Driver','Date'].concat(STATUS_COLS.map(function(s){return STATUS_LABELS[s]+' (h:mm)';})).concat(['Total Tracked (h:mm)'])];
+    summaryRows.forEach(function (row) {
+      var r = [row.driverName, displayDate(row.date)];
+      STATUS_COLS.forEach(function (s) { r.push(formatHM(row[s])); });
+      r.push(formatHM(row.total)); sAoa.push(r);
+    });
+    var ws1 = XLSX.utils.aoa_to_sheet(sAoa);
+    ws1['!cols'] = [{wch:30},{wch:12},{wch:12},{wch:16},{wch:10},{wch:24},{wch:12},{wch:24},{wch:18}];
+    ws1['!freeze'] = { xSplit:0, ySplit:1 };
+    XLSX.utils.book_append_sheet(wb, ws1, 'Summary');
+
+    var dAoa = [['Driver','Date','Start Time','End Time','Status','Duration (h:mm)']];
+    detailRows.forEach(function (row) { dAoa.push([row.driverName, row.dateDisplay, row.startTime, row.endTime, row.statusLabel, formatHM(row.durationSec)]); });
+    var ws2 = XLSX.utils.aoa_to_sheet(dAoa);
+    ws2['!cols'] = [{wch:30},{wch:12},{wch:10},{wch:10},{wch:25},{wch:14}];
+    ws2['!freeze'] = { xSplit:0, ySplit:1 };
+    XLSX.utils.book_append_sheet(wb, ws2, 'Status Detail');
+
+    XLSX.writeFile(wb, 'HOS_Report_' + label + '.xlsx');
+  }
+
+  // ── Main runner ────────────────────────────────────────────────────────────
+  function runReport() {
+    if (!dateRange) { alert('Please select a date range first.'); return; }
+    summaryRows = []; detailRows = [];
+    el('hos-download-btn').disabled = true;
+    el('hos-record-count').textContent = '';
+    lockControls(true);
+
+    var driverMap = {}, logs = [], dOk = false, lOk = false, err = null;
+
+    function done() {
+      if (!dOk || !lOk) return;
+      if (err) { setStatus('error', 'Error: ' + err); lockControls(false); return; }
+      setStatus('loading', 'Processing ' + logs.length + ' status records\u2026');
+      try {
+        var p = processLogs(logs, driverMap, dateRange);
+        summaryRows = p.summary; detailRows = p.detail;
+        renderSummaryTable(summaryRows);
+        renderDetailTable(detailRows);
+        var drivers = new Set(summaryRows.map(function(r){return r.driverName;})).size;
+        setStatus('success', '\u2713 Done \u2014 ' + drivers + ' HOS driver' + (drivers!==1?'s':'') + ', ' + summaryRows.length + ' driver-day records, ' + detailRows.length + ' status events.');
+        el('hos-record-count').textContent = drivers + ' driver' + (drivers!==1?'s':'') + ' \u00b7 ' + summaryRows.length + ' rows';
+        el('hos-download-btn').disabled = false;
+      } catch (e) { setStatus('error', 'Processing error: ' + e.message); }
+      lockControls(false);
+    }
+
+    fetchDrivers(function(e,m){ if(e) err=e; else driverMap=m; dOk=true; done(); });
+    fetchLogs(dateRange.start, dateRange.end, function(e,r){ if(e) err=e; else logs=r; lOk=true; done(); });
+  }
+
+  // ── Event wiring ───────────────────────────────────────────────────────────
+  function wireEvents() {
+    document.querySelectorAll('.hos-preset-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () { selectPreset(btn.dataset.preset); });
+    });
+    el('hos-apply-btn').addEventListener('click', function () { applyCustomRange(); el('hos-download-btn').disabled=true; el('hos-record-count').textContent=''; });
+    el('hos-run-btn').addEventListener('click', runReport);
+    el('hos-download-btn').addEventListener('click', downloadExcel);
+    el('hos-tab-summary').addEventListener('click', function () { switchTab('summary'); });
+    el('hos-tab-detail').addEventListener('click',  function () { switchTab('detail');  });
+  }
+};
+</script>
+</body>
+</html>
