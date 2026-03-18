@@ -353,8 +353,30 @@ geotab.addin.driverHOSReport = function (api, state) {
     );
   }
 
+  // Fetch the 30 days before the period to seed carry-over statuses.
+  // Returns: { driverId -> lastLogBeforePeriod } map.
+  function fetchCarryOver(periodStart, callback) {
+    var from = addDays(periodStart, -30);
+    setStatus('loading', 'Fetching carry-over window (30 days prior)\u2026');
+    api.call('Get', {
+      typeName: 'DutyStatusLog',
+      search: { fromDate: from.toISOString(), toDate: periodStart.toISOString() },
+      resultsLimit: 50000
+    }, function (results) {
+      // Keep only the LAST log per driver (their status just before the period started)
+      var lastByDriver = {};
+      (results || []).forEach(function (log) {
+        var dId = (log.driver && log.driver.id) || 'unidentified';
+        if (!lastByDriver[dId] || new Date(log.dateTime) > new Date(lastByDriver[dId].dateTime)) {
+          lastByDriver[dId] = log;
+        }
+      });
+      callback(null, lastByDriver);
+    }, function (err) { callback(err.message || String(err)); });
+  }
+
   function fetchLogs(start, end, callback) {
-    var fetchStart = addDays(start, -1); // one extra day for carry-over
+    var fetchStart = new Date(start); // start exactly at period — carry-over handled separately
     var days = [], cursor = new Date(fetchStart);
     while (cursor < end) { var nx = addDays(cursor,1); days.push({from:new Date(cursor),to:new Date(nx)}); cursor = nx; }
 
@@ -372,7 +394,7 @@ geotab.addin.driverHOSReport = function (api, state) {
   }
 
   // ── Processing ─────────────────────────────────────────────────────────────
-  function processLogs(logs, driverMap, range) {
+  function processLogs(logs, carryOver, driverMap, range) {
     logs.sort(function (a,b) {
       var dA=(a.driver&&a.driver.id)||'', dB=(b.driver&&b.driver.id)||'';
       return dA!==dB ? (dA<dB?-1:1) : new Date(a.dateTime)-new Date(b.dateTime);
@@ -383,6 +405,30 @@ geotab.addin.driverHOSReport = function (api, state) {
       var dId = (log.driver && log.driver.id) || 'unidentified';
       if (!byDriver[dId]) byDriver[dId] = [];
       byDriver[dId].push(log);
+    });
+
+    // Inject carry-over: for every driver whose last known status started before the
+    // report period, prepend a synthetic entry at range.start so their status fills
+    // any gap at the beginning (e.g. a driver who has been Off Duty since last Thursday).
+    Object.keys(carryOver).forEach(function (dId) {
+      // Only for HOS-enabled drivers (or unidentified)
+      if (dId !== 'unidentified' && !driverMap[dId]) return;
+      var synthetic = {
+        driver: dId === 'unidentified' ? null : { id: dId },
+        dateTime: range.start.toISOString(),
+        status: carryOver[dId].status,
+        _synthetic: true
+      };
+      if (!byDriver[dId]) {
+        // Driver had zero in-period logs — seed them entirely from carry-over
+        byDriver[dId] = [synthetic];
+      } else {
+        // Only prepend if their first real log starts after range.start
+        var firstRealTime = new Date(byDriver[dId][0].dateTime);
+        if (firstRealTime > range.start) {
+          byDriver[dId].unshift(synthetic);
+        }
+      }
     });
 
     var summaryMap = {}, detail = [], now = new Date();
@@ -516,14 +562,14 @@ geotab.addin.driverHOSReport = function (api, state) {
     el('hos-record-count').textContent = '';
     lockControls(true);
 
-    var driverMap = {}, logs = [], dOk = false, lOk = false, err = null;
+    var driverMap = {}, logs = [], carryOver = {}, dOk = false, lOk = false, cOk = false, err = null;
 
     function done() {
-      if (!dOk || !lOk) return;
+      if (!dOk || !lOk || !cOk) return;
       if (err) { setStatus('error', 'Error: ' + err); lockControls(false); return; }
       setStatus('loading', 'Processing ' + logs.length + ' status records\u2026');
       try {
-        var p = processLogs(logs, driverMap, dateRange);
+        var p = processLogs(logs, carryOver, driverMap, dateRange);
         summaryRows = p.summary; detailRows = p.detail;
         renderSummaryTable(summaryRows);
         renderDetailTable(detailRows);
@@ -537,6 +583,7 @@ geotab.addin.driverHOSReport = function (api, state) {
 
     fetchDrivers(function(e,m){ if(e) err=e; else driverMap=m; dOk=true; done(); });
     fetchLogs(dateRange.start, dateRange.end, function(e,r){ if(e) err=e; else logs=r; lOk=true; done(); });
+    fetchCarryOver(dateRange.start, function(e,r){ if(e) err=e; else carryOver=r; cOk=true; done(); });
   }
 
   // ── Event wiring ───────────────────────────────────────────────────────────
