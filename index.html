@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Driver HOS Report</title>
+  <!-- SheetJS for Excel export — loaded early so it is ready by the time the user runs a report -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -234,20 +236,16 @@ geotab.addin.driverHOSReport = function (api, state) {
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
   return {
-    initialize: function (fa, fs, cb) { api = fa; state = fs; loadSheetJS(function () { wireEvents(); selectPreset('lastWeek'); cb(); }); },
-    focus:      function (fa, fs)     { api = fa; state = fs; },
-    blur:       function ()           {}
+    initialize: function (fa, fs, cb) {
+      api = fa; state = fs;
+      xlsxReady = !!window.XLSX; // SheetJS loaded via static <script> tag in <head>
+      wireEvents();
+      selectPreset('lastWeek');
+      cb(); // Never block MyGeotab's loading indicator on a CDN request
+    },
+    focus: function (fa, fs) { api = fa; state = fs; },
+    blur:  function ()       {}
   };
-
-  // ── SheetJS ────────────────────────────────────────────────────────────────
-  function loadSheetJS(cb) {
-    if (window.XLSX) { xlsxReady = true; cb(); return; }
-    var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
-    s.onload  = function () { xlsxReady = true;  cb(); };
-    s.onerror = function () { xlsxReady = false; cb(); };
-    document.head.appendChild(s);
-  }
 
   // ── DOM helpers ────────────────────────────────────────────────────────────
   function el(id) { return document.getElementById(id); }
