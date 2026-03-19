@@ -43,16 +43,16 @@
       letter-spacing: .06em; color: #6c757d; margin-bottom: 8px;
     }
 
-    /* ── Preset button group ── */
-    .hos-preset-group { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
-    .hos-preset-btn {
-      padding: 6px 14px; border-radius: 20px; border: 1.5px solid #ced4da;
-      background: #fff; color: #495057; cursor: pointer; font-size: 12.5px;
-      font-weight: 500; transition: all .15s; white-space: nowrap;
+    /* ── Date dropdown ── */
+    .hos-date-select-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .hos-date-select-row .hos-section-label { margin-bottom: 0; white-space: nowrap; }
+    .hos-select {
+      padding: 6px 10px; border: 1.5px solid #ced4da; border-radius: 5px;
+      background: #fff; color: #212529; font-size: 13px; cursor: pointer;
+      min-width: 160px;
     }
-    .hos-preset-btn:hover:not(:disabled) { border-color: #0075BE; color: #0075BE; background: #f0f8ff; }
-    .hos-preset-btn.active { background: #0075BE; border-color: #0075BE; color: #fff; font-weight: 600; }
-    .hos-preset-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .hos-select:focus { outline: none; border-color: #0075BE; box-shadow: 0 0 0 3px rgba(0,117,190,.12); }
+    .hos-select:disabled { opacity: .4; cursor: not-allowed; }
 
     /* ── Custom date row ── */
     .hos-custom-row {
@@ -174,12 +174,15 @@
   <div class="hos-card">
     <div class="hos-section-label">Date Range</div>
 
-    <div class="hos-preset-group">
-      <button class="hos-preset-btn active" data-preset="lastWeek">Last Week</button>
-      <button class="hos-preset-btn" data-preset="thisWeek">This Week</button>
-      <button class="hos-preset-btn" data-preset="thisMonth">This Month</button>
-      <button class="hos-preset-btn" data-preset="lastMonth">Last Month</button>
-      <button class="hos-preset-btn" data-preset="custom">Custom Range</button>
+    <div class="hos-date-select-row">
+      <label class="hos-section-label" for="hos-preset-select">Date</label>
+      <select id="hos-preset-select" class="hos-select">
+        <option value="thisWeek">This Week</option>
+        <option value="lastWeek" selected>Last Week</option>
+        <option value="thisMonth">This Month</option>
+        <option value="lastMonth">Last Month</option>
+        <option value="custom">Custom Range</option>
+      </select>
     </div>
 
     <div id="hos-custom-row" class="hos-custom-row" style="display:none">
@@ -272,9 +275,9 @@ window.geotab.addin.driverHOSReport = function (api, state) {
   }
 
   function lockControls(lock) {
-    el('hos-run-btn').disabled   = lock;
-    el('hos-apply-btn').disabled = lock;
-    document.querySelectorAll('.hos-preset-btn').forEach(function (b) { b.disabled = lock; });
+    el('hos-run-btn').disabled        = lock;
+    el('hos-apply-btn').disabled      = lock;
+    el('hos-preset-select').disabled  = lock;
   }
 
   function switchTab(tab) {
@@ -313,7 +316,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
   // ── Preset / range selection ───────────────────────────────────────────────
   function selectPreset(preset) {
     activePreset = preset;
-    document.querySelectorAll('.hos-preset-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.preset === preset); });
+    el('hos-preset-select').value = preset;
     if (preset === 'custom') {
       el('hos-custom-row').style.display = '';
       if (!el('hos-start-date').value) { var lw = PRESETS.lastWeek(); el('hos-start-date').value = isoDate(lw.start); el('hos-end-date').value = isoDate(new Date(lw.end.getTime() - 86400000)); }
@@ -592,9 +595,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
 
   // ── Event wiring ───────────────────────────────────────────────────────────
   function wireEvents() {
-    document.querySelectorAll('.hos-preset-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () { selectPreset(btn.dataset.preset); });
-    });
+    el('hos-preset-select').addEventListener('change', function () { selectPreset(this.value); });
     el('hos-apply-btn').addEventListener('click', function () { applyCustomRange(); el('hos-download-btn').disabled=true; el('hos-record-count').textContent=''; });
     el('hos-run-btn').addEventListener('click', runReport);
     el('hos-download-btn').addEventListener('click', downloadExcel);
