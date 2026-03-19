@@ -660,19 +660,27 @@ window.geotab.addin.driverHOSReport = function (api, state) {
 
   // ── Column resize ──────────────────────────────────────────────────────────
   function makeResizable(table) {
+    var ths = Array.prototype.slice.call(table.querySelectorAll('th'));
+    // Snapshot rendered widths BEFORE switching to fixed layout
+    var widths = ths.map(function (th) { return th.offsetWidth; });
     table.style.tableLayout = 'fixed';
-    table.querySelectorAll('th').forEach(function (th) {
-      th.style.width = th.offsetWidth + 'px';
+    ths.forEach(function (th, i) {
+      th.style.width = (widths[i] || 80) + 'px';
       var handle = document.createElement('div');
       handle.className = 'hos-col-resize';
       th.appendChild(handle);
       handle.addEventListener('mousedown', function (e) {
         e.preventDefault();
+        e.stopPropagation();
         handle.classList.add('hos-col-dragging');
-        var startX = e.pageX, startW = th.offsetWidth;
-        function onMove(e) { th.style.width = Math.max(40, startW + e.pageX - startX) + 'px'; }
+        var startX = e.clientX, startW = th.offsetWidth;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        function onMove(e) { th.style.width = Math.max(40, startW + e.clientX - startX) + 'px'; }
         function onUp() {
           handle.classList.remove('hos-col-dragging');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
           document.removeEventListener('mousemove', onMove);
           document.removeEventListener('mouseup', onUp);
         }
