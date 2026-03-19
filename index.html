@@ -149,14 +149,6 @@
     .hos-table th {
       background: #003764; color: #fff; padding: 9px 11px; text-align: left;
       font-weight: 600; white-space: nowrap; border-right: 1px solid #1a4a78;
-      position: relative; overflow: visible;
-    }
-    .hos-col-resize {
-      position: absolute; right: -3px; top: 0; bottom: 0; width: 6px;
-      cursor: col-resize; z-index: 10; user-select: none;
-    }
-    .hos-col-resize:hover, .hos-col-resize.hos-col-dragging {
-      background: rgba(255,255,255,0.35);
     }
     .hos-table th:last-child { border-right: none; }
     .hos-table td { padding: 6px 11px; border-bottom: 1px solid #f1f3f5; border-right: 1px solid #e9ecef; white-space: nowrap; }
@@ -273,6 +265,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
   var cachedAllSummaryRows = [];
   var cachedAllDetailRows  = [];
   var hosBaseUrl          = '';
+  var resizeDragging = false, resizeTh = null, resizeStartX = 0, resizeStartW = 0;
 
   var PRESETS = {
     lastWeek:  function () { var m = thisMonday(); return { start: addDays(m,-7), end: m }; },
@@ -659,35 +652,34 @@ window.geotab.addin.driverHOSReport = function (api, state) {
   }
 
   // ── Column resize ──────────────────────────────────────────────────────────
+  function nearRightEdge(th, clientX) {
+    return clientX >= th.getBoundingClientRect().right - 8;
+  }
+
   function makeResizable(table) {
     var ths = Array.prototype.slice.call(table.querySelectorAll('th'));
-    // Snapshot rendered widths BEFORE switching to fixed layout
     var widths = ths.map(function (th) { return th.offsetWidth; });
     table.style.tableLayout = 'fixed';
-    ths.forEach(function (th, i) {
-      th.style.width = (widths[i] || 80) + 'px';
-      var handle = document.createElement('div');
-      handle.className = 'hos-col-resize';
-      handle.style.height = th.offsetHeight + 'px';
-      th.appendChild(handle);
-      handle.addEventListener('mousedown', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        handle.classList.add('hos-col-dragging');
-        var startX = e.clientX, startW = th.offsetWidth;
-        document.body.style.cursor = 'col-resize';
-        document.body.style.userSelect = 'none';
-        function onMove(e) { th.style.width = Math.max(40, startW + e.clientX - startX) + 'px'; }
-        function onUp() {
-          handle.classList.remove('hos-col-dragging');
-          document.body.style.cursor = '';
-          document.body.style.userSelect = '';
-          document.removeEventListener('mousemove', onMove);
-          document.removeEventListener('mouseup', onUp);
-        }
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp);
-      });
+    ths.forEach(function (th, i) { th.style.width = (widths[i] || 80) + 'px'; });
+
+    table.addEventListener('mousemove', function (e) {
+      if (resizeDragging) return;
+      var th = e.target;
+      while (th && th.tagName !== 'TH') th = th.parentElement;
+      table.style.cursor = (th && nearRightEdge(th, e.clientX)) ? 'col-resize' : '';
+    });
+    table.addEventListener('mouseleave', function () {
+      if (!resizeDragging) table.style.cursor = '';
+    });
+    table.addEventListener('mousedown', function (e) {
+      var th = e.target;
+      while (th && th.tagName !== 'TH') th = th.parentElement;
+      if (!th || !nearRightEdge(th, e.clientX)) return;
+      e.preventDefault();
+      resizeDragging = true; resizeTh = th;
+      resizeStartX = e.clientX; resizeStartW = th.offsetWidth;
+      document.body.style.cursor    = 'col-resize';
+      document.body.style.userSelect = 'none';
     });
   }
 
@@ -725,6 +717,16 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     el('hos-tab-summary').addEventListener('click', function () { switchTab('summary'); });
     el('hos-tab-detail').addEventListener('click',  function () { switchTab('detail');  });
     el('hos-driver-select').addEventListener('change', function () { if (cachedAllSummaryRows.length) applyDriverFilter(); });
+    document.addEventListener('mousemove', function (e) {
+      if (!resizeDragging || !resizeTh) return;
+      resizeTh.style.width = Math.max(40, resizeStartW + e.clientX - resizeStartX) + 'px';
+    });
+    document.addEventListener('mouseup', function () {
+      if (!resizeDragging) return;
+      resizeDragging = false; resizeTh = null;
+      document.body.style.cursor    = '';
+      document.body.style.userSelect = '';
+    });
   }
 };
 </script>
