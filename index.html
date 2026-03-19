@@ -43,9 +43,37 @@
       letter-spacing: .06em; color: #6c757d; margin-bottom: 8px;
     }
 
+    /* ── Filter row (Date + Driver side by side) ── */
+    .hos-filter-row { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; margin-bottom: 14px; }
+
     /* ── Date dropdown ── */
-    .hos-date-select-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .hos-date-select-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 0; }
     .hos-date-select-row .hos-section-label { margin-bottom: 0; white-space: nowrap; }
+
+    /* ── Driver multi-select ── */
+    .hos-ms-wrap { display: flex; flex-direction: column; gap: 4px; }
+    .hos-ms { position: relative; }
+    .hos-ms-btn {
+      padding: 6px 10px; border: 1.5px solid #ced4da; border-radius: 5px;
+      background: #fff; color: #212529; font-size: 13px; cursor: pointer;
+      min-width: 200px; text-align: left; display: flex; justify-content: space-between;
+      align-items: center; gap: 8px; white-space: nowrap;
+    }
+    .hos-ms-btn:focus { outline: none; border-color: #0075BE; box-shadow: 0 0 0 3px rgba(0,117,190,.12); }
+    .hos-ms-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .hos-ms-panel {
+      position: absolute; top: calc(100% + 2px); left: 0; z-index: 200;
+      background: #fff; border: 1.5px solid #ced4da; border-radius: 5px;
+      min-width: 220px; max-height: 220px; overflow-y: auto;
+      box-shadow: 0 4px 12px rgba(0,0,0,.1);
+    }
+    .hos-ms-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 12px; cursor: pointer; font-size: 13px; user-select: none;
+    }
+    .hos-ms-item:hover { background: #f0f8ff; }
+    .hos-ms-item-all { font-weight: 600; border-bottom: 1px solid #dee2e6; position: sticky; top: 0; background: #fff; z-index: 1; }
+    .hos-ms-item input[type="checkbox"] { cursor: pointer; flex-shrink: 0; }
     .hos-select {
       padding: 6px 10px; border: 1.5px solid #ced4da; border-radius: 5px;
       background: #fff; color: #212529; font-size: 13px; cursor: pointer;
@@ -175,15 +203,29 @@
   <div class="hos-card">
     <div class="hos-section-label">Date Range</div>
 
-    <div class="hos-date-select-row">
-      <label class="hos-section-label" for="hos-preset-select">Date</label>
-      <select id="hos-preset-select" class="hos-select">
-        <option value="thisWeek">This Week</option>
-        <option value="lastWeek" selected>Last Week</option>
-        <option value="thisMonth">This Month</option>
-        <option value="lastMonth">Last Month</option>
-        <option value="custom">Custom Range</option>
-      </select>
+    <div class="hos-filter-row">
+      <div class="hos-date-select-row">
+        <label class="hos-section-label" for="hos-preset-select">Date</label>
+        <select id="hos-preset-select" class="hos-select">
+          <option value="thisWeek">This Week</option>
+          <option value="lastWeek" selected>Last Week</option>
+          <option value="thisMonth">This Month</option>
+          <option value="lastMonth">Last Month</option>
+          <option value="custom">Custom Range</option>
+        </select>
+      </div>
+      <div class="hos-ms-wrap">
+        <div class="hos-section-label">Driver</div>
+        <div class="hos-ms">
+          <button class="hos-ms-btn" id="hos-ms-btn" type="button" disabled>Loading drivers&#8230; <span>&#9662;</span></button>
+          <div class="hos-ms-panel" id="hos-ms-panel" style="display:none">
+            <label class="hos-ms-item hos-ms-item-all">
+              <input type="checkbox" id="hos-ms-all" checked> Select All
+            </label>
+            <div id="hos-ms-list"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div id="hos-custom-row" class="hos-custom-row" style="display:none">
@@ -240,11 +282,14 @@ window.geotab.addin.driverHOSReport = function (api, state) {
   var MONTH_NAMES   = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   var DAY_NAMES     = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-  var activePreset = 'lastWeek';
-  var dateRange    = null;
-  var summaryRows  = [];
-  var detailRows   = [];
-  var xlsxReady    = false;
+  var activePreset        = 'lastWeek';
+  var dateRange           = null;
+  var summaryRows         = [];
+  var detailRows          = [];
+  var xlsxReady           = false;
+  var cachedDriverMap     = null;
+  var cachedAllSummaryRows = [];
+  var cachedAllDetailRows  = [];
 
   var PRESETS = {
     lastWeek:  function () { var m = thisMonday(); return { start: addDays(m,-7), end: m }; },
@@ -257,10 +302,14 @@ window.geotab.addin.driverHOSReport = function (api, state) {
   return {
     initialize: function (fa, fs, cb) {
       api = fa; state = fs;
-      xlsxReady = !!window.XLSX; // SheetJS loaded via static <script> tag in <head>
+      xlsxReady = !!window.XLSX;
       wireEvents();
       selectPreset('lastWeek');
-      cb(); // Never block MyGeotab's loading indicator on a CDN request
+      cb();
+      fetchDrivers(function (err, map) {
+        if (!err) { cachedDriverMap = map; populateDriverFilter(map); }
+        else { var b = el('hos-ms-btn'); if (b) { b.innerHTML = 'All Drivers <span>&#9662;</span>'; b.disabled = false; } }
+      });
     },
     focus: function (fa, fs) { api = fa; state = fs; },
     blur:  function ()       {}
@@ -281,6 +330,8 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     el('hos-run-btn').disabled        = lock;
     el('hos-apply-btn').disabled      = lock;
     el('hos-preset-select').disabled  = lock;
+    el('hos-ms-btn').disabled         = lock;
+    if (lock) el('hos-ms-panel').style.display = 'none';
   }
 
   function switchTab(tab) {
@@ -413,8 +464,9 @@ window.geotab.addin.driverHOSReport = function (api, state) {
 
     var byDriver = {};
     logs.forEach(function (log) {
-      if (!VALID_STATUSES[log.status]) return; // skip Certify, Logoff, Login, etc.
-      var dId = (log.driver && log.driver.id) || 'unidentified';
+      if (!VALID_STATUSES[log.status]) return;
+      if (!log.driver || !log.driver.id) return; // skip unidentified
+      var dId = log.driver.id;
       if (!byDriver[dId]) byDriver[dId] = [];
       byDriver[dId].push(log);
     });
@@ -423,10 +475,9 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     // report period, prepend a synthetic entry at range.start so their status fills
     // any gap at the beginning (e.g. a driver who has been Off Duty since last Thursday).
     Object.keys(carryOver).forEach(function (dId) {
-      // Only for HOS-enabled drivers (or unidentified)
-      if (dId !== 'unidentified' && !driverMap[dId]) return;
+      if (!driverMap[dId]) return; // skip non-HOS and unidentified
       var synthetic = {
-        driver: dId === 'unidentified' ? null : { id: dId },
+        driver: { id: dId },
         dateTime: range.start.toISOString(),
         status: carryOver[dId].status,
         _synthetic: true
@@ -446,11 +497,10 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     var summaryMap = {}, detail = [], now = new Date();
 
     Object.keys(byDriver).forEach(function (dId) {
-      // Skip drivers without an HOS ruleset (not in our map), except unidentified
-      if (dId !== 'unidentified' && !driverMap[dId]) return;
+      if (!driverMap[dId]) return;
 
       var driverLogs = byDriver[dId];
-      var driverName = dId === 'unidentified' ? UNIDENTIFIED : driverMap[dId].name;
+      var driverName = driverMap[dId].name;
       summaryMap[dId] = { name: driverName, days: {} };
 
       for (var i = 0; i < driverLogs.length; i++) {
@@ -510,8 +560,8 @@ window.geotab.addin.driverHOSReport = function (api, state) {
 
     var html = '<div class="hos-table-note">&#9432;&nbsp; <strong>Total Tracked</strong> reflects only logged status time. Days may show less than 24 h if a driver had no active status record for part of the day.</div>' +
       '<table class="hos-table"><thead><tr><th>Driver</th><th>Date</th>';
-    STATUS_COLS.forEach(function (s) { html += '<th>' + COL_HEADERS[s] + '</th>'; });
-    html += '<th>Total Tracked</th></tr></thead><tbody>';
+    STATUS_COLS.forEach(function (s) { html += '<th style="min-width:90px;text-align:right">' + COL_HEADERS[s] + '</th>'; });
+    html += '<th style="min-width:90px;text-align:right">Total Tracked</th></tr></thead><tbody>';
 
     rows.forEach(function (row) {
       html += '<tr><td class="hos-driver-cell">' + escHtml(row.driverName) + '</td><td>' + displayDate(row.date) + '</td>';
@@ -569,22 +619,22 @@ window.geotab.addin.driverHOSReport = function (api, state) {
   // ── Main runner ────────────────────────────────────────────────────────────
   function runReport() {
     if (!dateRange) { alert('Please select a date range first.'); return; }
+    cachedAllSummaryRows = []; cachedAllDetailRows = [];
     summaryRows = []; detailRows = [];
     el('hos-download-btn').disabled = true;
     el('hos-record-count').textContent = '';
     lockControls(true);
 
-    var driverMap = {}, logs = [], carryOver = {}, dOk = false, lOk = false, cOk = false, err = null;
+    var logs = [], carryOver = {}, lOk = false, cOk = false, dOk = !!cachedDriverMap, err = null;
 
     function done() {
       if (!dOk || !lOk || !cOk) return;
       if (err) { setStatus('error', 'Error: ' + err); lockControls(false); return; }
       setStatus('loading', 'Processing ' + logs.length + ' status records\u2026');
       try {
-        var p = processLogs(logs, carryOver, driverMap, dateRange);
-        summaryRows = p.summary; detailRows = p.detail;
-        renderSummaryTable(summaryRows);
-        renderDetailTable(detailRows);
+        var p = processLogs(logs, carryOver, cachedDriverMap, dateRange);
+        cachedAllSummaryRows = p.summary; cachedAllDetailRows = p.detail;
+        applyDriverFilter();
         var drivers = new Set(summaryRows.map(function(r){return r.driverName;})).size;
         setStatus('success', '\u2713 Done \u2014 ' + drivers + ' HOS driver' + (drivers!==1?'s':'') + ', ' + summaryRows.length + ' driver-day records, ' + detailRows.length + ' status events.');
         el('hos-record-count').textContent = drivers + ' driver' + (drivers!==1?'s':'') + ' \u00b7 ' + summaryRows.length + ' rows';
@@ -593,9 +643,90 @@ window.geotab.addin.driverHOSReport = function (api, state) {
       lockControls(false);
     }
 
-    fetchDrivers(function(e,m){ if(e) err=e; else driverMap=m; dOk=true; done(); });
+    if (!cachedDriverMap) {
+      fetchDrivers(function(e, m) {
+        if (e) err = e; else { cachedDriverMap = m; populateDriverFilter(m); }
+        dOk = true; done();
+      });
+    }
     fetchLogs(dateRange.start, dateRange.end, function(e,r){ if(e) err=e; else logs=r; lOk=true; done(); });
     fetchCarryOver(dateRange.start, function(e,r){ if(e) err=e; else carryOver=r; cOk=true; done(); });
+  }
+
+  // ── Driver filter ───────────────────────────────────────────────────────────
+  function populateDriverFilter(driverMap) {
+    var list = el('hos-ms-list');
+    var btn  = el('hos-ms-btn');
+    var drivers = Object.keys(driverMap).map(function(id) {
+      return { id: id, name: driverMap[id].name };
+    }).sort(function(a, b) { return a.name < b.name ? -1 : 1; });
+
+    list.innerHTML = '';
+    drivers.forEach(function(d) {
+      var lbl = document.createElement('label');
+      lbl.className = 'hos-ms-item';
+      var chk = document.createElement('input');
+      chk.type = 'checkbox'; chk.checked = true;
+      chk.dataset.driverName = d.name;
+      chk.addEventListener('change', onDriverCheckChange);
+      lbl.appendChild(chk);
+      lbl.appendChild(document.createTextNode('\u00a0' + d.name));
+      list.appendChild(lbl);
+    });
+
+    el('hos-ms-all').checked = true;
+    btn.disabled = false;
+    updateDriverBtnLabel();
+  }
+
+  function wireDriverFilter() {
+    el('hos-ms-btn').addEventListener('click', function (e) {
+      e.stopPropagation();
+      var panel = el('hos-ms-panel');
+      panel.style.display = panel.style.display === 'none' ? '' : 'none';
+    });
+    el('hos-ms-panel').addEventListener('click', function (e) { e.stopPropagation(); });
+    document.addEventListener('click', function () { el('hos-ms-panel').style.display = 'none'; });
+    el('hos-ms-all').addEventListener('change', onSelectAllChange);
+  }
+
+  function onSelectAllChange() {
+    var checked = el('hos-ms-all').checked;
+    document.querySelectorAll('#hos-ms-list input[type="checkbox"]').forEach(function(c) { c.checked = checked; });
+    updateDriverBtnLabel();
+    if (cachedAllSummaryRows.length) applyDriverFilter();
+  }
+
+  function onDriverCheckChange() {
+    var all = document.querySelectorAll('#hos-ms-list input[type="checkbox"]');
+    var n = 0; all.forEach(function(c) { if (c.checked) n++; });
+    el('hos-ms-all').checked = (n === all.length);
+    updateDriverBtnLabel();
+    if (cachedAllSummaryRows.length) applyDriverFilter();
+  }
+
+  function updateDriverBtnLabel() {
+    var all = document.querySelectorAll('#hos-ms-list input[type="checkbox"]');
+    var n = 0; all.forEach(function(c) { if (c.checked) n++; });
+    el('hos-ms-btn').innerHTML = (n === all.length ? 'All Drivers' : n + ' Driver' + (n !== 1 ? 's' : '')) + ' <span style="opacity:.6">&#9662;</span>';
+  }
+
+  function getSelectedDriverNames() {
+    var all = document.querySelectorAll('#hos-ms-list input[type="checkbox"]');
+    if (!all.length) return null;
+    var n = 0; all.forEach(function(c) { if (c.checked) n++; });
+    if (n === all.length) return null;
+    var names = {};
+    all.forEach(function(c) { if (c.checked) names[c.dataset.driverName] = true; });
+    return names;
+  }
+
+  function applyDriverFilter() {
+    var sel = getSelectedDriverNames();
+    summaryRows = sel ? cachedAllSummaryRows.filter(function(r) { return sel[r.driverName]; }) : cachedAllSummaryRows;
+    detailRows  = sel ? cachedAllDetailRows.filter(function(r)  { return sel[r.driverName]; }) : cachedAllDetailRows;
+    renderSummaryTable(summaryRows);
+    renderDetailTable(detailRows);
   }
 
   // ── Event wiring ───────────────────────────────────────────────────────────
@@ -606,6 +737,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     el('hos-download-btn').addEventListener('click', downloadExcel);
     el('hos-tab-summary').addEventListener('click', function () { switchTab('summary'); });
     el('hos-tab-detail').addEventListener('click',  function () { switchTab('detail');  });
+    wireDriverFilter();
   }
 };
 </script>
