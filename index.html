@@ -662,9 +662,25 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     return clientX >= th.getBoundingClientRect().right - 8;
   }
 
+  function colStorageKey(table) {
+    var pid = table.parentElement && table.parentElement.id;
+    return pid === 'hos-summary-wrap' ? 'hos_widths_summary' : 'hos_widths_detail';
+  }
+
+  function saveColWidths(table) {
+    try {
+      var widths = Array.prototype.slice.call(table.querySelectorAll('th')).map(function (th) { return th.offsetWidth; });
+      localStorage.setItem(colStorageKey(table), JSON.stringify(widths));
+    } catch (e) {}
+  }
+
   function makeResizable(table) {
     var ths = Array.prototype.slice.call(table.querySelectorAll('th'));
     var widths = ths.map(function (th) { return th.offsetWidth; });
+    try {
+      var saved = JSON.parse(localStorage.getItem(colStorageKey(table)));
+      if (saved && saved.length === ths.length) widths = saved;
+    } catch (e) {}
     table.style.tableLayout = 'fixed';
     ths.forEach(function (th, i) { th.style.width = (widths[i] || 80) + 'px'; });
 
@@ -728,7 +744,10 @@ window.geotab.addin.driverHOSReport = function (api, state) {
       resizeTh.style.width = Math.max(40, resizeStartW + e.clientX - resizeStartX) + 'px';
     });
     document.addEventListener('mouseup', function () {
-      if (!resizeDragging) return;
+      if (!resizeDragging || !resizeTh) return;
+      var tableEl = resizeTh.parentElement;
+      while (tableEl && tableEl.tagName !== 'TABLE') tableEl = tableEl.parentElement;
+      if (tableEl) saveColWidths(tableEl);
       resizeDragging = false; resizeTh = null;
       document.body.style.cursor    = '';
       document.body.style.userSelect = '';
