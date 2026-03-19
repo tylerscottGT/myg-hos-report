@@ -156,7 +156,7 @@
     .hos-table tbody tr:nth-child(even) { background: #f8f9fa; }
     .hos-table tbody tr:hover { background: #e8f4fd; }
 
-    .hos-num { text-align: right; font-variant-numeric: tabular-nums; font-family: 'Courier New', monospace; font-size: 12px; }
+    .hos-num { text-align: center; font-variant-numeric: tabular-nums; font-family: 'Courier New', monospace; font-size: 12px; }
     .hos-total { font-weight: 700; color: #003764; }
     .hos-driver-cell { font-weight: 500; }
 
@@ -531,8 +531,8 @@ window.geotab.addin.driverHOSReport = function (api, state) {
 
     var html = '<div class="hos-table-note">&#9432;&nbsp; <strong>Total Tracked</strong> reflects only logged status time. Days may show less than 24 h if a driver had no active status record for part of the day.</div>' +
       '<table class="hos-table"><thead><tr><th>Driver</th><th>Date</th>';
-    STATUS_COLS.forEach(function (s) { html += '<th style="min-width:90px;text-align:right">' + COL_HEADERS[s] + '</th>'; });
-    html += '<th style="min-width:90px;text-align:right">Total Tracked</th></tr></thead><tbody>';
+    STATUS_COLS.forEach(function (s) { html += '<th style="min-width:90px;text-align:center">' + COL_HEADERS[s] + '</th>'; });
+    html += '<th style="min-width:90px;text-align:center">Total Tracked</th></tr></thead><tbody>';
 
     rows.forEach(function (row) {
       html += '<tr><td class="hos-driver-cell">' + escHtml(row.driverName) + '</td><td>' + displayDate(row.date) + '</td>';
