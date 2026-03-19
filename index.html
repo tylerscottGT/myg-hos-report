@@ -167,6 +167,8 @@
     .hos-table .hos-num { text-align: center; font-variant-numeric: tabular-nums; font-family: 'Courier New', monospace; font-size: 12px; }
     .hos-total { font-weight: 700; color: #003764; }
     .hos-driver-cell { font-weight: 500; }
+    .hos-date-link { color: #0075BE; text-decoration: none; border-bottom: 1px dotted #0075BE; }
+    .hos-date-link:hover { color: #005a8e; border-bottom-style: solid; }
 
     /* ── Status badges ── */
     .hos-badge { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; }
@@ -270,6 +272,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
   var cachedDriverMap     = null;
   var cachedAllSummaryRows = [];
   var cachedAllDetailRows  = [];
+  var hosBaseUrl          = '';
 
   var PRESETS = {
     lastWeek:  function () { var m = thisMonday(); return { start: addDays(m,-7), end: m }; },
@@ -286,6 +289,13 @@ window.geotab.addin.driverHOSReport = function (api, state) {
       wireEvents();
       selectPreset('lastWeek');
       cb();
+      if (typeof api.getSession === 'function') {
+        api.getSession(function (credentials, server) {
+          var srv = server || 'my.geotab.com';
+          var db  = (credentials && credentials.database) || '';
+          if (db) hosBaseUrl = 'https://' + srv + '/' + db + '/';
+        });
+      }
       fetchDrivers(function (err, map) {
         if (!err) { cachedDriverMap = map; populateDriverFilter(map); }
         else { var s = el('hos-driver-select'); if (s) { s.innerHTML = '<option value="all">All Drivers</option>'; s.disabled = false; } }
@@ -506,7 +516,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     Object.keys(summaryMap).forEach(function (dId) {
       var data = summaryMap[dId];
       Object.keys(data.days).sort().forEach(function (dayKey) {
-        var bucket = data.days[dayKey], row = { driverName: data.name, date: dayKey }, total = 0;
+        var bucket = data.days[dayKey], row = { driverName: data.name, driverId: dId, date: dayKey }, total = 0;
         STATUS_COLS.forEach(function (s) { row[s] = bucket[s] || 0; total += row[s]; });
         row.total = total; summary.push(row);
       });
@@ -532,6 +542,16 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     }
   }
 
+  // ── HOS Logs deep-link ─────────────────────────────────────────────────────
+  function buildHosUrl(driverId, dateStr) {
+    if (!hosBaseUrl || !driverId) return null;
+    var parts = dateStr.split('-'), y = +parts[0], m = +parts[1]-1, d = +parts[2];
+    var start = new Date(y, m, d,  0,  0,  0, 0).toISOString();
+    var end   = new Date(y, m, d, 23, 59, 59, 0).toISOString();
+    return hosBaseUrl + "#hosLogs,dateRange:(endDate:'" + end + "',startDate:'" + start +
+      "'),driver:" + driverId + ",includeExemptions:!f,includeIntermediateLogs:!f,includeModificationOption:!t";
+  }
+
   // ── Rendering ──────────────────────────────────────────────────────────────
   function renderSummaryTable(rows) {
     var wrap = el('hos-summary-wrap');
@@ -543,7 +563,11 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     html += '<th style="min-width:90px;text-align:center">Total Tracked</th></tr></thead><tbody>';
 
     rows.forEach(function (row) {
-      html += '<tr><td class="hos-driver-cell">' + escHtml(row.driverName) + '</td><td>' + displayDate(row.date) + '</td>';
+      var hosUrl  = buildHosUrl(row.driverId, row.date);
+      var dateCell = hosUrl
+        ? '<a href="' + escHtml(hosUrl) + '" target="_blank" rel="noopener" class="hos-date-link">' + displayDate(row.date) + '</a>'
+        : displayDate(row.date);
+      html += '<tr><td class="hos-driver-cell">' + escHtml(row.driverName) + '</td><td>' + dateCell + '</td>';
       STATUS_COLS.forEach(function (s) {
         html += '<td class="hos-num">' + (row[s] > 29 ? formatHM(row[s]) : '<span style="opacity:.3">\u2014</span>') + '</td>';
       });
