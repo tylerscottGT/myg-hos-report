@@ -240,6 +240,13 @@ window.geotab.addin.driverHOSReport = function (api, state) {
   var detailRows   = [];
   var xlsxReady    = false;
 
+  var PRESETS = {
+    lastWeek:  function () { var m = thisMonday(); return { start: addDays(m,-7), end: m }; },
+    thisWeek:  function () { return { start: thisMonday(), end: new Date() }; },
+    thisMonth: function () { var n = new Date(); return { start: new Date(n.getFullYear(), n.getMonth(), 1), end: new Date() }; },
+    lastMonth: function () { var n = new Date(); return { start: new Date(n.getFullYear(), n.getMonth()-1, 1), end: new Date(n.getFullYear(), n.getMonth(), 1) }; }
+  };
+
   // ── Lifecycle ──────────────────────────────────────────────────────────────
   return {
     initialize: function (fa, fs, cb) {
@@ -302,13 +309,6 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     var e = DAY_NAMES[last.getDay()] + ', ' + (sameMonth ? '' : MONTH_NAMES[last.getMonth()] + ' ') + last.getDate() + ', ' + last.getFullYear();
     return s + ' \u2013 ' + e;
   }
-
-  var PRESETS = {
-    lastWeek:  function () { var m = thisMonday(); return { start: addDays(m,-7), end: m }; },
-    thisWeek:  function () { return { start: thisMonday(), end: new Date() }; },
-    thisMonth: function () { var n = new Date(); return { start: new Date(n.getFullYear(), n.getMonth(), 1), end: new Date() }; },
-    lastMonth: function () { var n = new Date(); return { start: new Date(n.getFullYear(), n.getMonth()-1, 1), end: new Date(n.getFullYear(), n.getMonth(), 1) }; }
-  };
 
   // ── Preset / range selection ───────────────────────────────────────────────
   function selectPreset(preset) {
