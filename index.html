@@ -232,6 +232,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
 
   var STATUS_COLS   = ['OFF', 'SB', 'D', 'ON', 'YM', 'PC'];
   var STATUS_LABELS = { OFF:'Off Duty', SB:'Sleeper Berth', D:'Driving', ON:'On Duty Not Driving', YM:'Yard Move', PC:'Personal Conveyance' };
+  var VALID_STATUSES = { OFF:true, SB:true, D:true, ON:true, YM:true, PC:true };
   var UNIDENTIFIED  = 'Unidentified Driver';
   var RESULTS_LIMIT = 50000;
   var MONTH_NAMES   = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -373,6 +374,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
       // Keep only the LAST log per driver (their status just before the period started)
       var lastByDriver = {};
       (results || []).forEach(function (log) {
+        if (!VALID_STATUSES[log.status]) return; // skip Certify, Logoff, Login, etc.
         var dId = (log.driver && log.driver.id) || 'unidentified';
         if (!lastByDriver[dId] || new Date(log.dateTime) > new Date(lastByDriver[dId].dateTime)) {
           lastByDriver[dId] = log;
@@ -409,6 +411,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
 
     var byDriver = {};
     logs.forEach(function (log) {
+      if (!VALID_STATUSES[log.status]) return; // skip Certify, Logoff, Login, etc.
       var dId = (log.driver && log.driver.id) || 'unidentified';
       if (!byDriver[dId]) byDriver[dId] = [];
       byDriver[dId].push(log);
