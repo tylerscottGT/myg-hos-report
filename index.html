@@ -668,6 +668,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
       th.style.width = (widths[i] || 80) + 'px';
       var handle = document.createElement('div');
       handle.className = 'hos-col-resize';
+      handle.style.height = th.offsetHeight + 'px';
       th.appendChild(handle);
       handle.addEventListener('mousedown', function (e) {
         e.preventDefault();
