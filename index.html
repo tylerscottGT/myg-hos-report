@@ -149,6 +149,14 @@
     .hos-table th {
       background: #003764; color: #fff; padding: 9px 11px; text-align: left;
       font-weight: 600; white-space: nowrap; border-right: 1px solid #1a4a78;
+      position: relative; overflow: visible;
+    }
+    .hos-col-resize {
+      position: absolute; right: -3px; top: 0; bottom: 0; width: 6px;
+      cursor: col-resize; z-index: 10; user-select: none;
+    }
+    .hos-col-resize:hover, .hos-col-resize.hos-col-dragging {
+      background: rgba(255,255,255,0.35);
     }
     .hos-table th:last-child { border-right: none; }
     .hos-table td { padding: 6px 11px; border-bottom: 1px solid #f1f3f5; border-right: 1px solid #e9ecef; white-space: nowrap; }
@@ -543,6 +551,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     });
     html += '</tbody></table>';
     wrap.innerHTML = html;
+    makeResizable(wrap.querySelector('.hos-table'));
   }
 
   function renderDetailTable(rows) {
@@ -558,6 +567,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     });
     html += '</tbody></table>';
     wrap.innerHTML = html;
+    makeResizable(wrap.querySelector('.hos-table'));
   }
 
   // ── Excel export ───────────────────────────────────────────────────────────
@@ -622,6 +632,30 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     }
     fetchLogs(dateRange.start, dateRange.end, function(e,r){ if(e) err=e; else logs=r; lOk=true; done(); });
     fetchCarryOver(dateRange.start, function(e,r){ if(e) err=e; else carryOver=r; cOk=true; done(); });
+  }
+
+  // ── Column resize ──────────────────────────────────────────────────────────
+  function makeResizable(table) {
+    table.style.tableLayout = 'fixed';
+    table.querySelectorAll('th').forEach(function (th) {
+      th.style.width = th.offsetWidth + 'px';
+      var handle = document.createElement('div');
+      handle.className = 'hos-col-resize';
+      th.appendChild(handle);
+      handle.addEventListener('mousedown', function (e) {
+        e.preventDefault();
+        handle.classList.add('hos-col-dragging');
+        var startX = e.pageX, startW = th.offsetWidth;
+        function onMove(e) { th.style.width = Math.max(40, startW + e.pageX - startX) + 'px'; }
+        function onUp() {
+          handle.classList.remove('hos-col-dragging');
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+    });
   }
 
   // ── Driver filter ───────────────────────────────────────────────────────────
