@@ -145,7 +145,8 @@
       font-weight: 600; white-space: nowrap; border-right: 1px solid #1a4a78;
     }
     .hos-table th:last-child { border-right: none; }
-    .hos-table td { padding: 6px 11px; border-bottom: 1px solid #f1f3f5; white-space: nowrap; }
+    .hos-table td { padding: 6px 11px; border-bottom: 1px solid #f1f3f5; border-right: 1px solid #e9ecef; white-space: nowrap; }
+    .hos-table td:last-child { border-right: none; }
     .hos-table tbody tr:nth-child(even) { background: #f8f9fa; }
     .hos-table tbody tr:hover { background: #e8f4fd; }
 
@@ -232,6 +233,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
 
   var STATUS_COLS   = ['OFF', 'SB', 'D', 'ON', 'YM', 'PC'];
   var STATUS_LABELS = { OFF:'Off Duty', SB:'Sleeper Berth', D:'Driving', ON:'On Duty Not Driving', YM:'Yard Move', PC:'Personal Conveyance' };
+  var COL_HEADERS   = { OFF:'Off Duty', SB:'SB', D:'Driving', ON:'On Duty Not Driving', YM:'YM', PC:'PC' };
   var VALID_STATUSES = { OFF:true, SB:true, D:true, ON:true, YM:true, PC:true };
   var UNIDENTIFIED  = 'Unidentified Driver';
   var RESULTS_LIMIT = 50000;
@@ -508,7 +510,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
 
     var html = '<div class="hos-table-note">&#9432;&nbsp; <strong>Total Tracked</strong> reflects only logged status time. Days may show less than 24 h if a driver had no active status record for part of the day.</div>' +
       '<table class="hos-table"><thead><tr><th>Driver</th><th>Date</th>';
-    STATUS_COLS.forEach(function (s) { html += '<th>' + STATUS_LABELS[s] + '</th>'; });
+    STATUS_COLS.forEach(function (s) { html += '<th>' + COL_HEADERS[s] + '</th>'; });
     html += '<th>Total Tracked</th></tr></thead><tbody>';
 
     rows.forEach(function (row) {
