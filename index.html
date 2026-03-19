@@ -222,7 +222,9 @@
 </div>
 <script>
 /* global geotab, XLSX */
-geotab.addin.driverHOSReport = function (api, state) {
+window.geotab = window.geotab || {};
+window.geotab.addin = window.geotab.addin || {};
+window.geotab.addin.driverHOSReport = function (api, state) {
   'use strict';
 
   var STATUS_COLS   = ['OFF', 'SB', 'D', 'ON', 'YM', 'PC'];
