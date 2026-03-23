@@ -825,7 +825,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     var q = query.trim().toLowerCase();
     list.querySelectorAll('.hos-driver-opt').forEach(function (opt) {
       var val = (opt.querySelector('.hos-driver-chk') || {}).value || '';
-      opt.style.display = (!q || val.toLowerCase().indexOf(q) !== -1) ? '' : 'none';
+      opt.style.display = (!q || val.toLowerCase().indexOf(q) !== -1) ? 'flex' : 'none';
     });
   }
 
