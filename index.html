@@ -162,6 +162,30 @@
     .hos-date-link { color: #0075BE; text-decoration: none; border-bottom: 1px dotted #0075BE; }
     .hos-date-link:hover { color: #005a8e; border-bottom-style: solid; }
 
+    /* ── Driver multi-select dropdown ── */
+    .hos-driver-dropdown { position: relative; display: inline-block; }
+    .hos-driver-btn {
+      padding: 6px 32px 6px 10px; border: 1.5px solid #ced4da; border-radius: 5px;
+      background: #fff; color: #212529; font-size: 13px; cursor: pointer;
+      min-width: 180px; text-align: left; position: relative; white-space: nowrap;
+    }
+    .hos-driver-btn::after { content: '\25BE'; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+    .hos-driver-btn:focus { outline: none; border-color: #0075BE; box-shadow: 0 0 0 3px rgba(0,117,190,.12); }
+    .hos-driver-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .hos-driver-panel {
+      position: absolute; top: calc(100% + 2px); left: 0; min-width: 220px; max-height: 260px;
+      overflow-y: auto; background: #fff; border: 1.5px solid #ced4da; border-radius: 6px;
+      box-shadow: 0 4px 14px rgba(0,0,0,.12); z-index: 200;
+    }
+    .hos-driver-opt {
+      display: flex; align-items: center; gap: 8px; padding: 7px 12px;
+      cursor: pointer; font-size: 13px; user-select: none;
+    }
+    .hos-driver-opt:not(:last-child) { border-bottom: 1px solid #f1f3f5; }
+    .hos-driver-opt:hover { background: #f8f9fa; }
+    .hos-driver-opt input { cursor: pointer; width: 14px; height: 14px; flex-shrink: 0; }
+    .hos-driver-opt-all { font-weight: 600; border-bottom: 2px solid #dee2e6 !important; }
+
     /* ── Status badges ── */
     .hos-badge { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; }
     .hos-badge-OFF { background: #e2e3e5; color: #383d41; }
@@ -195,10 +219,13 @@
         </select>
       </div>
       <div class="hos-driver-wrap">
-        <label class="hos-section-label" for="hos-driver-select">Driver</label>
-        <select id="hos-driver-select" class="hos-select" disabled>
-          <option value="all">Loading drivers&#8230;</option>
-        </select>
+        <label class="hos-section-label">Driver</label>
+        <div class="hos-driver-dropdown" id="hos-driver-dropdown">
+          <button id="hos-driver-btn" class="hos-driver-btn" disabled>Loading drivers&#8230;</button>
+          <div id="hos-driver-panel" class="hos-driver-panel" style="display:none">
+            <div id="hos-driver-list"></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -291,7 +318,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
       }
       fetchDrivers(function (err, map) {
         if (!err) { cachedDriverMap = map; populateDriverFilter(map); }
-        else { var s = el('hos-driver-select'); if (s) { s.innerHTML = '<option value="all">All Drivers</option>'; s.disabled = false; } }
+        else { var b = el('hos-driver-btn'); if (b) { b.textContent = 'All Drivers'; b.disabled = false; } }
       });
     },
     focus: function (fa, fs) { api = fa; state = fs; },
@@ -313,7 +340,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     el('hos-run-btn').disabled        = lock;
     el('hos-apply-btn').disabled      = lock;
     el('hos-preset-select').disabled  = lock;
-    el('hos-driver-select').disabled  = lock;
+    el('hos-driver-btn').disabled     = lock;
   }
 
   function switchTab(tab) {
@@ -707,25 +734,58 @@ window.geotab.addin.driverHOSReport = function (api, state) {
 
   // ── Driver filter ───────────────────────────────────────────────────────────
   function populateDriverFilter(driverMap) {
-    var sel = el('hos-driver-select');
+    var list = el('hos-driver-list');
     var drivers = Object.keys(driverMap).map(function(id) {
       return { id: id, name: driverMap[id].name };
     }).sort(function(a, b) { return a.name < b.name ? -1 : 1; });
 
-    sel.innerHTML = '<option value="all">All Drivers</option>';
+    var html = '<label class="hos-driver-opt hos-driver-opt-all"><input type="checkbox" id="hos-chk-all" checked> All Drivers</label>';
     drivers.forEach(function(d) {
-      var opt = document.createElement('option');
-      opt.value = d.name;
-      opt.textContent = d.name;
-      sel.appendChild(opt);
+      html += '<label class="hos-driver-opt"><input type="checkbox" class="hos-driver-chk" value="' + escHtml(d.name) + '" checked> ' + escHtml(d.name) + '</label>';
     });
-    sel.disabled = false;
+    list.innerHTML = html;
+
+    var chkAll = el('hos-chk-all');
+    chkAll.addEventListener('change', function() {
+      list.querySelectorAll('.hos-driver-chk').forEach(function(c) { c.checked = chkAll.checked; });
+      updateDriverBtnLabel();
+      if (cachedAllSummaryRows.length) applyDriverFilter();
+    });
+    list.querySelectorAll('.hos-driver-chk').forEach(function(chk) {
+      chk.addEventListener('change', function() {
+        var all = list.querySelectorAll('.hos-driver-chk');
+        var checked = list.querySelectorAll('.hos-driver-chk:checked');
+        chkAll.checked = all.length === checked.length;
+        chkAll.indeterminate = checked.length > 0 && checked.length < all.length;
+        updateDriverBtnLabel();
+        if (cachedAllSummaryRows.length) applyDriverFilter();
+      });
+    });
+
+    el('hos-driver-btn').disabled = false;
+    updateDriverBtnLabel();
+  }
+
+  function updateDriverBtnLabel() {
+    var btn = el('hos-driver-btn');
+    var list = el('hos-driver-list');
+    if (!list) return;
+    var all     = list.querySelectorAll('.hos-driver-chk');
+    var checked = list.querySelectorAll('.hos-driver-chk:checked');
+    if (checked.length === 0)           btn.textContent = 'No drivers selected';
+    else if (checked.length === all.length) btn.textContent = 'All Drivers';
+    else btn.textContent = checked.length + ' driver' + (checked.length !== 1 ? 's' : '') + ' selected';
   }
 
   function applyDriverFilter() {
-    var val = el('hos-driver-select').value;
-    summaryRows = val === 'all' ? cachedAllSummaryRows : cachedAllSummaryRows.filter(function(r) { return r.driverName === val; });
-    detailRows  = val === 'all' ? cachedAllDetailRows  : cachedAllDetailRows.filter(function(r)  { return r.driverName === val; });
+    var list = el('hos-driver-list');
+    var checked = list ? list.querySelectorAll('.hos-driver-chk:checked') : [];
+    var selected = {};
+    Array.prototype.forEach.call(checked, function(c) { selected[c.value] = true; });
+    var totalChks = list ? list.querySelectorAll('.hos-driver-chk').length : 0;
+    var isAll = Object.keys(selected).length === totalChks;
+    summaryRows = isAll ? cachedAllSummaryRows : cachedAllSummaryRows.filter(function(r) { return selected[r.driverName]; });
+    detailRows  = isAll ? cachedAllDetailRows  : cachedAllDetailRows.filter(function(r)  { return selected[r.driverName]; });
     renderSummaryTable(summaryRows);
     renderDetailTable(detailRows);
   }
@@ -738,7 +798,16 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     el('hos-download-btn').addEventListener('click', downloadExcel);
     el('hos-tab-summary').addEventListener('click', function () { switchTab('summary'); });
     el('hos-tab-detail').addEventListener('click',  function () { switchTab('detail');  });
-    el('hos-driver-select').addEventListener('change', function () { if (cachedAllSummaryRows.length) applyDriverFilter(); });
+    el('hos-driver-btn').addEventListener('click', function (e) {
+      e.stopPropagation();
+      var panel = el('hos-driver-panel');
+      panel.style.display = panel.style.display === 'none' ? '' : 'none';
+    });
+    el('hos-driver-panel').addEventListener('click', function (e) { e.stopPropagation(); });
+    document.addEventListener('click', function () {
+      var panel = el('hos-driver-panel');
+      if (panel) panel.style.display = 'none';
+    });
     document.addEventListener('mousemove', function (e) {
       if (!resizeDragging || !resizeTh) return;
       resizeTh.style.width = Math.max(40, resizeStartW + e.clientX - resizeStartX) + 'px';
