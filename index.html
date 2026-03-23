@@ -406,7 +406,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
 
   // ── API calls ──────────────────────────────────────────────────────────────
   function fetchDrivers(callback) {
-    api.call('Get', { typeName: 'User', search: { isDriver: true }, resultsLimit: 10000 },
+    api.call('Get', { typeName: 'User', search: { isDriver: true, isArchived: false }, resultsLimit: 10000 },
       function (users) {
         var map = {};
         (users || []).forEach(function (u) {
