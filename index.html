@@ -178,10 +178,10 @@
       border-radius: 10px; padding: 1px 6px; line-height: 1.4;
     }
     .hos-driver-panel {
-      position: absolute; top: calc(100% + 2px); left: 0; min-width: 220px;
+      position: fixed; min-width: 220px;
       display: flex; flex-direction: column; max-height: 300px;
       background: #fff; border: 1.5px solid #ced4da; border-radius: 6px;
-      box-shadow: 0 4px 14px rgba(0,0,0,.12); z-index: 200;
+      box-shadow: 0 4px 14px rgba(0,0,0,.12); z-index: 9999;
     }
     .hos-driver-panel-hd { flex-shrink: 0; padding: 8px 10px; border-bottom: 1px solid #dee2e6; }
     .hos-driver-search {
@@ -189,10 +189,10 @@
       font-size: 12.5px; outline: none;
     }
     .hos-driver-search:focus { border-color: #0075BE; }
-    #hos-driver-list { overflow-y: auto; flex: 1; }
+    #hos-driver-list { overflow-y: auto; flex: 1; display: block; }
     .hos-driver-opt {
-      display: flex; align-items: center; gap: 8px; padding: 7px 12px;
-      cursor: pointer; font-size: 13px; user-select: none;
+      display: flex !important; align-items: center; gap: 8px; padding: 7px 12px;
+      cursor: pointer; font-size: 13px; user-select: none; width: 100%;
     }
     .hos-driver-opt:not(:last-child) { border-bottom: 1px solid #f1f3f5; }
     .hos-driver-opt:hover { background: #f8f9fa; }
@@ -240,15 +240,6 @@
         <label class="hos-section-label">Driver</label>
         <div class="hos-driver-dropdown" id="hos-driver-dropdown">
           <button id="hos-driver-btn" class="hos-driver-btn" disabled>Drivers <span id="hos-driver-badge" class="hos-driver-badge" style="display:none"></span></button>
-          <div id="hos-driver-panel" class="hos-driver-panel" style="display:none">
-            <div class="hos-driver-panel-hd">
-              <input type="text" id="hos-driver-search" class="hos-driver-search" placeholder="Search drivers&hellip;" autocomplete="off">
-            </div>
-            <div id="hos-driver-list"></div>
-            <div class="hos-driver-panel-ft">
-              <button id="hos-driver-clear" class="hos-driver-clear">Clear</button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -856,7 +847,10 @@ window.geotab.addin.driverHOSReport = function (api, state) {
       e.stopPropagation();
       var panel = el('hos-driver-panel');
       if (panel.style.display === 'none') {
-        panel.style.display = '';
+        var rect = el('hos-driver-btn').getBoundingClientRect();
+        panel.style.top  = (rect.bottom + 2) + 'px';
+        panel.style.left = rect.left + 'px';
+        panel.style.display = 'flex';
         el('hos-driver-search').focus();
       } else {
         closeDriverPanel();
@@ -888,5 +882,15 @@ window.geotab.addin.driverHOSReport = function (api, state) {
   }
 };
 </script>
+<!-- Driver panel lives at body level so position:fixed isn't clipped by parent overflow -->
+<div id="hos-driver-panel" class="hos-driver-panel" style="display:none">
+  <div class="hos-driver-panel-hd">
+    <input type="text" id="hos-driver-search" class="hos-driver-search" placeholder="Search drivers&hellip;" autocomplete="off">
+  </div>
+  <div id="hos-driver-list"></div>
+  <div class="hos-driver-panel-ft">
+    <button id="hos-driver-clear" class="hos-driver-clear">Clear</button>
+  </div>
+</div>
 </body>
 </html>
