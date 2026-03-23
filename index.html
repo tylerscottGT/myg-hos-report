@@ -165,25 +165,28 @@
     /* ── Driver multi-select dropdown ── */
     .hos-driver-dropdown { position: relative; display: inline-block; }
     .hos-driver-btn {
-      padding: 6px 32px 6px 10px; border: 1.5px solid #ced4da; border-radius: 5px;
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 10px; border: 1.5px solid #ced4da; border-radius: 5px;
       background: #fff; color: #212529; font-size: 13px; cursor: pointer;
-      min-width: 180px; text-align: left; position: relative; white-space: nowrap;
+      white-space: nowrap; font-weight: 500;
     }
-    .hos-driver-btn::after { content: '\25BE'; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+    .hos-driver-btn::after { content: '\25BE'; font-size: 11px; color: #6c757d; }
     .hos-driver-btn:focus { outline: none; border-color: #0075BE; box-shadow: 0 0 0 3px rgba(0,117,190,.12); }
     .hos-driver-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .hos-driver-badge {
+      background: #0075BE; color: #fff; font-size: 11px; font-weight: 700;
+      border-radius: 10px; padding: 1px 6px; line-height: 1.4;
+    }
     .hos-driver-panel {
-      position: absolute; top: calc(100% + 2px); left: 0; min-width: 240px;
+      position: absolute; top: calc(100% + 2px); left: 0; min-width: 220px;
       display: flex; flex-direction: column; max-height: 300px;
       background: #fff; border: 1.5px solid #ced4da; border-radius: 6px;
       box-shadow: 0 4px 14px rgba(0,0,0,.12); z-index: 200;
     }
-    .hos-driver-panel-hd {
-      flex-shrink: 0; padding: 8px 10px; border-bottom: 2px solid #dee2e6;
-    }
+    .hos-driver-panel-hd { flex-shrink: 0; padding: 8px 10px; border-bottom: 1px solid #dee2e6; }
     .hos-driver-search {
       width: 100%; padding: 5px 8px; border: 1.5px solid #ced4da; border-radius: 4px;
-      font-size: 12.5px; outline: none; margin-bottom: 6px;
+      font-size: 12.5px; outline: none;
     }
     .hos-driver-search:focus { border-color: #0075BE; }
     #hos-driver-list { overflow-y: auto; flex: 1; }
@@ -193,8 +196,13 @@
     }
     .hos-driver-opt:not(:last-child) { border-bottom: 1px solid #f1f3f5; }
     .hos-driver-opt:hover { background: #f8f9fa; }
-    .hos-driver-opt input { cursor: pointer; width: 14px; height: 14px; flex-shrink: 0; }
-    .hos-driver-opt-all { font-weight: 600; }
+    .hos-driver-opt input { cursor: pointer; width: 14px; height: 14px; flex-shrink: 0; accent-color: #0075BE; }
+    .hos-driver-panel-ft { flex-shrink: 0; padding: 7px 12px; border-top: 1px solid #dee2e6; }
+    .hos-driver-clear {
+      background: none; border: none; color: #0075BE; font-size: 13px;
+      cursor: pointer; padding: 0; font-weight: 500;
+    }
+    .hos-driver-clear:hover { text-decoration: underline; }
 
     /* ── Status badges ── */
     .hos-badge { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; }
@@ -231,13 +239,15 @@
       <div class="hos-driver-wrap">
         <label class="hos-section-label">Driver</label>
         <div class="hos-driver-dropdown" id="hos-driver-dropdown">
-          <button id="hos-driver-btn" class="hos-driver-btn" disabled>Loading drivers&#8230;</button>
+          <button id="hos-driver-btn" class="hos-driver-btn" disabled>Drivers <span id="hos-driver-badge" class="hos-driver-badge" style="display:none"></span></button>
           <div id="hos-driver-panel" class="hos-driver-panel" style="display:none">
             <div class="hos-driver-panel-hd">
               <input type="text" id="hos-driver-search" class="hos-driver-search" placeholder="Search drivers&hellip;" autocomplete="off">
-              <label class="hos-driver-opt hos-driver-opt-all"><input type="checkbox" id="hos-chk-all" checked> All Drivers</label>
             </div>
             <div id="hos-driver-list"></div>
+            <div class="hos-driver-panel-ft">
+              <button id="hos-driver-clear" class="hos-driver-clear">Clear</button>
+            </div>
           </div>
         </div>
       </div>
@@ -772,22 +782,12 @@ window.geotab.addin.driverHOSReport = function (api, state) {
 
     var html = '';
     drivers.forEach(function(d) {
-      html += '<label class="hos-driver-opt"><input type="checkbox" class="hos-driver-chk" value="' + escHtml(d.name) + '" checked> ' + escHtml(d.name) + '</label>';
+      html += '<label class="hos-driver-opt"><input type="checkbox" class="hos-driver-chk" value="' + escHtml(d.name) + '"> ' + escHtml(d.name) + '</label>';
     });
     list.innerHTML = html;
 
-    var chkAll = el('hos-chk-all');
-    chkAll.addEventListener('change', function() {
-      list.querySelectorAll('.hos-driver-chk').forEach(function(c) { c.checked = chkAll.checked; });
-      updateDriverBtnLabel();
-      if (cachedAllSummaryRows.length) applyDriverFilter();
-    });
     list.querySelectorAll('.hos-driver-chk').forEach(function(chk) {
       chk.addEventListener('change', function() {
-        var all = list.querySelectorAll('.hos-driver-chk');
-        var checked = list.querySelectorAll('.hos-driver-chk:checked');
-        chkAll.checked = all.length === checked.length;
-        chkAll.indeterminate = checked.length > 0 && checked.length < all.length;
         updateDriverBtnLabel();
         if (cachedAllSummaryRows.length) applyDriverFilter();
       });
@@ -798,25 +798,30 @@ window.geotab.addin.driverHOSReport = function (api, state) {
   }
 
   function updateDriverBtnLabel() {
-    var btn = el('hos-driver-btn');
-    var list = el('hos-driver-list');
-    if (!list) return;
-    var all     = list.querySelectorAll('.hos-driver-chk');
-    var checked = list.querySelectorAll('.hos-driver-chk:checked');
-    if (checked.length === 0)           btn.textContent = 'No drivers selected';
-    else if (checked.length === all.length) btn.textContent = 'All Drivers';
-    else btn.textContent = checked.length + ' driver' + (checked.length !== 1 ? 's' : '') + ' selected';
+    var badge = el('hos-driver-badge');
+    var list  = el('hos-driver-list');
+    if (!badge || !list) return;
+    var n = list.querySelectorAll('.hos-driver-chk:checked').length;
+    if (n === 0) {
+      badge.style.display = 'none';
+    } else {
+      badge.textContent   = n;
+      badge.style.display = '';
+    }
   }
 
   function applyDriverFilter() {
     var list = el('hos-driver-list');
     var checked = list ? list.querySelectorAll('.hos-driver-chk:checked') : [];
-    var selected = {};
-    Array.prototype.forEach.call(checked, function(c) { selected[c.value] = true; });
-    var totalChks = list ? list.querySelectorAll('.hos-driver-chk').length : 0;
-    var isAll = Object.keys(selected).length === totalChks;
-    summaryRows = isAll ? cachedAllSummaryRows : cachedAllSummaryRows.filter(function(r) { return selected[r.driverName]; });
-    detailRows  = isAll ? cachedAllDetailRows  : cachedAllDetailRows.filter(function(r)  { return selected[r.driverName]; });
+    if (checked.length === 0) {
+      summaryRows = cachedAllSummaryRows;
+      detailRows  = cachedAllDetailRows;
+    } else {
+      var selected = {};
+      Array.prototype.forEach.call(checked, function(c) { selected[c.value] = true; });
+      summaryRows = cachedAllSummaryRows.filter(function(r) { return selected[r.driverName]; });
+      detailRows  = cachedAllDetailRows.filter(function(r)  { return selected[r.driverName]; });
+    }
     renderSummaryTable(summaryRows);
     renderDetailTable(detailRows);
   }
@@ -859,6 +864,13 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     });
     el('hos-driver-panel').addEventListener('click', function (e) { e.stopPropagation(); });
     el('hos-driver-search').addEventListener('input', function () { filterDriverList(this.value); });
+    el('hos-driver-clear').addEventListener('click', function () {
+      var list = el('hos-driver-list');
+      if (list) list.querySelectorAll('.hos-driver-chk').forEach(function(c) { c.checked = false; });
+      updateDriverBtnLabel();
+      if (cachedAllSummaryRows.length) applyDriverFilter();
+      closeDriverPanel();
+    });
     document.addEventListener('click', function () { closeDriverPanel(); });
     document.addEventListener('mousemove', function (e) {
       if (!resizeDragging || !resizeTh) return;
