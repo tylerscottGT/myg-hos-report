@@ -7,185 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="./xlsx.full.min.js"></script>
-  <style>
-    /* ── Zenith design tokens ── */
-    /* --text-primary:#1F2833  --text-secondary:#4E677E  --text-placeholder:#8DA4B9  */
-    /* --text-hyperlink:#005AA8  --backgrounds-main:#fff  --backgrounds-content-1:#F2F5F7 */
-    /* --backgrounds-content-0:#F9FAFB  --backgrounds-hover:#E6EBEF  --border:#D9E1E8  */
-    /* --brand:#25477B  --interactive:#0069BF  --interactive-light:#E6F0FA             */
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      font-size: 13px; color: #1F2833; background: #F2F5F7;
-    }
-
-    #hos-app { padding: 20px 24px; max-width: 100%; }
-
-    /* ── Page header ── */
-    .hos-page-header {
-      background: #25477B; border-radius: 8px;
-      padding: 16px 20px; margin-bottom: 16px;
-    }
-    .hos-page-header h1 { font-size: 18px; font-weight: 700; color: #fff; line-height: 1.2; }
-    .hos-page-header p  { font-size: 12px; color: rgba(255,255,255,.72); margin-top: 4px; }
-
-    /* ── Cards ── */
-    .hos-card {
-      background: #fff; border: 1px solid #D9E1E8; border-radius: 8px;
-      padding: 16px 20px; margin-bottom: 16px;
-      box-shadow: 0 1px 4px rgba(31,40,51,.06);
-    }
-
-    /* ── Section labels ── */
-    .hos-section-label {
-      font-size: 11px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .07em; color: #4E677E; margin-bottom: 8px;
-    }
-
-    /* ── Filter row ── */
-    .hos-filter-row { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; margin-bottom: 16px; }
-    .hos-date-select-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 0; }
-    .hos-date-select-row .hos-section-label { margin-bottom: 0; white-space: nowrap; }
-    .hos-driver-wrap { display: flex; flex-direction: column; gap: 4px; }
-
-    /* ── Inputs / selects ── */
-    .hos-select {
-      padding: 7px 10px; border: 1.5px solid #D9E1E8; border-radius: 6px;
-      background: #fff; color: #1F2833; font-size: 13px; cursor: pointer;
-      min-width: 160px; font-family: inherit;
-    }
-    .hos-select:focus { outline: none; border-color: #0069BF; box-shadow: 0 0 0 3px rgba(0,105,191,.12); }
-    .hos-select:disabled { opacity: .4; cursor: not-allowed; }
-
-    /* ── Custom date row ── */
-    .hos-custom-row {
-      display: flex; align-items: flex-end; flex-wrap: wrap; gap: 12px;
-      padding: 14px 16px; background: #F9FAFB; border: 1px solid #D9E1E8;
-      border-radius: 6px; margin-bottom: 16px;
-    }
-    .hos-date-field { display: flex; flex-direction: column; gap: 4px; }
-    .hos-date-field label { font-size: 11px; font-weight: 600; color: #4E677E; }
-    .hos-date-field input[type="date"] {
-      padding: 7px 10px; border: 1.5px solid #D9E1E8; border-radius: 6px;
-      font-size: 13px; color: #1F2833; background: #fff; cursor: pointer; font-family: inherit;
-    }
-    .hos-date-field input[type="date"]:focus { outline: none; border-color: #0069BF; box-shadow: 0 0 0 3px rgba(0,105,191,.12); }
-
-    /* ── Range chip ── */
-    .hos-range-chip {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: #E6F0FA; border: 1px solid #B8D4F0; border-radius: 20px;
-      padding: 5px 14px; font-size: 12.5px; font-weight: 600; color: #25477B; margin-bottom: 16px;
-    }
-    .hos-range-chip span { opacity: .65; font-weight: 400; }
-
-    /* ── Action row ── */
-    .hos-action-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
-
-    /* ── Buttons ── */
-    .hos-btn {
-      padding: 7px 16px; border-radius: 6px; border: 1.5px solid #D9E1E8;
-      background: #fff; color: #4E677E; cursor: pointer; font-size: 13px;
-      font-weight: 600; transition: all .15s; white-space: nowrap; font-family: inherit;
-    }
-    .hos-btn:hover:not(:disabled) { background: #E6EBEF; border-color: #C0CCD8; }
-    .hos-btn:disabled { opacity: .4; cursor: not-allowed; }
-    .hos-btn-sm { padding: 5px 12px; font-size: 12px; }
-    .hos-btn-primary { background: #25477B; border-color: #25477B; color: #fff; }
-    .hos-btn-primary:hover:not(:disabled) { background: #1e3a63; border-color: #1e3a63; }
-    .hos-btn-success { background: #2D7D46; border-color: #2D7D46; color: #fff; }
-    .hos-btn-success:hover:not(:disabled) { background: #246339; border-color: #246339; }
-
-    /* ── Status bar ── */
-    .hos-status {
-      padding: 10px 16px; border-radius: 6px; margin-bottom: 12px;
-      font-size: 13px; display: none; align-items: center; gap: 8px; font-weight: 500;
-    }
-    .hos-status-loading { background: #E6F0FA; border: 1px solid #B8D4F0; color: #25477B; display: flex; }
-    .hos-status-success { background: #E8F5ED; border: 1px solid #A8D5B5; color: #1B5E30; display: flex; }
-    .hos-status-error   { background: #FDECEB; border: 1px solid #F5B5B1; color: #7B1008; display: flex; }
-    .hos-spinner {
-      width: 14px; height: 14px; border: 2px solid currentColor;
-      border-right-color: transparent; border-radius: 50%;
-      animation: spin .6s linear infinite; flex-shrink: 0;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── Record count ── */
-    .hos-record-count { font-size: 12px; color: #4E677E; font-style: italic; }
-
-    /* ── Tabs ── */
-    .hos-tabs { display: flex; gap: 0; margin-bottom: -1px; }
-    .hos-tab {
-      padding: 9px 22px; border: 1.5px solid #D9E1E8; border-bottom: none;
-      background: #F2F5F7; color: #4E677E; cursor: pointer; font-size: 13px;
-      font-weight: 600; border-radius: 8px 8px 0 0; transition: background .15s; font-family: inherit;
-    }
-    .hos-tab:hover { background: #E6EBEF; }
-    .hos-tab.active { background: #fff; color: #25477B; border-color: #D9E1E8; border-bottom-color: #fff; }
-
-    /* ── Table container ── */
-    .hos-table-wrap {
-      background: #fff; border: 1.5px solid #D9E1E8; border-radius: 0 8px 8px 8px;
-      overflow: auto; max-height: calc(100vh - 300px);
-    }
-    .hos-table-note {
-      padding: 9px 16px; background: #FFF8E6; border-bottom: 1px solid #FFE4A0;
-      font-size: 12px; color: #7A5A00;
-    }
-    .hos-empty { padding: 40px; text-align: center; color: #4E677E; font-style: italic; }
-
-    /* ── Data table ── */
-    .hos-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-    .hos-table thead { position: sticky; top: 0; z-index: 2; }
-    .hos-table th {
-      background: #25477B; color: #fff; padding: 10px 12px; text-align: left;
-      font-weight: 700; white-space: nowrap; border-right: 1px solid #3a5a8f;
-      font-family: inherit; font-size: 12px; letter-spacing: .03em;
-    }
-    .hos-table th:last-child { border-right: none; }
-    .hos-table td { padding: 7px 12px; border-bottom: 1px solid #F2F5F7; border-right: 1px solid #E6EBEF; white-space: nowrap; }
-    .hos-table td:last-child { border-right: none; }
-    .hos-driver-shade { background: #F9FAFB; }
-    .hos-table tbody tr:hover { background: #EDF3FB !important; }
-    .hos-table .hos-num { text-align: center; font-variant-numeric: tabular-nums; font-family: 'Courier New', monospace; font-size: 12px; }
-    .hos-total { font-weight: 700; color: #25477B; }
-    .hos-driver-cell { font-weight: 600; color: #1F2833; }
-    .hos-date-link { color: #0069BF; text-decoration: none; border-bottom: 1px dotted #0069BF; }
-    .hos-date-link:hover { color: #004f8f; border-bottom-style: solid; }
-
-    /* ── Driver multi-select dropdown ── */
-    .hos-driver-dropdown { position: relative; display: inline-block; }
-    .hos-driver-btn {
-      display: inline-flex !important; align-items: center !important; gap: 6px !important;
-      padding: 7px 12px !important; border: 1.5px solid #D9E1E8 !important; border-radius: 6px !important;
-      background: #fff !important; color: #1F2833 !important; font-size: 13px !important;
-      cursor: pointer !important; white-space: nowrap !important; font-weight: 600 !important;
-      font-family: inherit !important; transition: background .15s, border-color .15s !important;
-    }
-    .hos-driver-btn:hover:not(:disabled) { background: #F2F5F7 !important; border-color: #C0CCD8 !important; }
-    .hos-driver-btn::after { content: '\25BE'; font-size: 11px; color: #8DA4B9; margin-left: 2px; }
-    .hos-driver-btn:focus { outline: none; border-color: #0069BF !important; box-shadow: 0 0 0 3px rgba(0,105,191,.12); }
-    .hos-driver-btn:disabled { opacity: .4 !important; cursor: not-allowed !important; }
-    .hos-driver-badge {
-      background: #0069BF !important; color: #fff !important; font-size: 11px !important;
-      font-weight: 700 !important; border-radius: 10px !important; padding: 1px 7px !important; line-height: 1.4 !important;
-    }
-
-    /* ── Status badges ── */
-    .hos-badge { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; }
-    .hos-badge-OFF { background: #E6EBEF; color: #3E5265; }
-    .hos-badge-SB  { background: #EDE7F6; color: #4A235A; }
-    .hos-badge-D   { background: #E8F5ED; color: #1B5E30; }
-    .hos-badge-ON  { background: #FFF8E1; color: #7A5A00; }
-    .hos-badge-YM  { background: #E0F7FA; color: #006064; }
-    .hos-badge-PC  { background: #E6F0FA; color: #25477B; }
-  </style>
 </head>
 <body>
 <div id="hos-app">
@@ -294,6 +116,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     initialize: function (fa, fs, cb) {
       api = fa; state = fs;
       xlsxReady = !!window.XLSX;
+      injectStyles();
       wireEvents();
       selectPreset('lastWeek');
       cb();
@@ -808,6 +631,89 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     panel.style.display = 'none';
     var srch = el('hos-driver-search');
     if (srch) { srch.value = ''; filterDriverList(''); }
+  }
+
+  // ── Style injection (MyGeotab strips <head> styles; inject at runtime) ─────
+  function injectStyles() {
+    if (document.getElementById('hos-styles')) return;
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&display=swap';
+    document.head.appendChild(link);
+    var s = document.createElement('style');
+    s.id = 'hos-styles';
+    s.textContent =
+      '*, *::before, *::after{box-sizing:border-box;margin:0;padding:0}' +
+      '#hos-app{font-family:"Nunito Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;color:#1F2833;padding:20px 24px;max-width:100%}' +
+      '.hos-page-header{background:#25477B;border-radius:8px;padding:16px 20px;margin-bottom:16px}' +
+      '.hos-page-header h1{font-size:18px;font-weight:700;color:#fff;line-height:1.2}' +
+      '.hos-page-header p{font-size:12px;color:rgba(255,255,255,.72);margin-top:4px}' +
+      '.hos-card{background:#fff;border:1px solid #D9E1E8;border-radius:8px;padding:16px 20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(31,40,51,.06)}' +
+      '.hos-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#4E677E;margin-bottom:8px}' +
+      '.hos-filter-row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;margin-bottom:16px}' +
+      '.hos-date-select-row{display:flex;flex-direction:column;gap:4px;margin-bottom:0}' +
+      '.hos-date-select-row .hos-section-label{margin-bottom:0;white-space:nowrap}' +
+      '.hos-driver-wrap{display:flex;flex-direction:column;gap:4px}' +
+      '.hos-select{padding:7px 10px;border:1.5px solid #D9E1E8;border-radius:6px;background:#fff;color:#1F2833;font-size:13px;cursor:pointer;min-width:160px;font-family:inherit}' +
+      '.hos-select:focus{outline:none;border-color:#0069BF;box-shadow:0 0 0 3px rgba(0,105,191,.12)}' +
+      '.hos-select:disabled{opacity:.4;cursor:not-allowed}' +
+      '.hos-custom-row{display:flex;align-items:flex-end;flex-wrap:wrap;gap:12px;padding:14px 16px;background:#F9FAFB;border:1px solid #D9E1E8;border-radius:6px;margin-bottom:16px}' +
+      '.hos-date-field{display:flex;flex-direction:column;gap:4px}' +
+      '.hos-date-field label{font-size:11px;font-weight:600;color:#4E677E}' +
+      '.hos-date-field input[type="date"]{padding:7px 10px;border:1.5px solid #D9E1E8;border-radius:6px;font-size:13px;color:#1F2833;background:#fff;cursor:pointer;font-family:inherit}' +
+      '.hos-date-field input[type="date"]:focus{outline:none;border-color:#0069BF;box-shadow:0 0 0 3px rgba(0,105,191,.12)}' +
+      '.hos-range-chip{display:inline-flex;align-items:center;gap:6px;background:#E6F0FA;border:1px solid #B8D4F0;border-radius:20px;padding:5px 14px;font-size:12.5px;font-weight:600;color:#25477B;margin-bottom:16px}' +
+      '.hos-range-chip span{opacity:.65;font-weight:400}' +
+      '.hos-action-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px}' +
+      '.hos-btn{padding:7px 16px;border-radius:6px;border:1.5px solid #D9E1E8;background:#fff;color:#4E677E;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;white-space:nowrap;font-family:inherit}' +
+      '.hos-btn:hover:not(:disabled){background:#E6EBEF;border-color:#C0CCD8}' +
+      '.hos-btn:disabled{opacity:.4;cursor:not-allowed}' +
+      '.hos-btn-sm{padding:5px 12px;font-size:12px}' +
+      '.hos-btn-primary{background:#25477B;border-color:#25477B;color:#fff}' +
+      '.hos-btn-primary:hover:not(:disabled){background:#1e3a63;border-color:#1e3a63}' +
+      '.hos-btn-success{background:#2D7D46;border-color:#2D7D46;color:#fff}' +
+      '.hos-btn-success:hover:not(:disabled){background:#246339;border-color:#246339}' +
+      '.hos-status{padding:10px 16px;border-radius:6px;margin-bottom:12px;font-size:13px;display:none;align-items:center;gap:8px;font-weight:500}' +
+      '.hos-status-loading{background:#E6F0FA;border:1px solid #B8D4F0;color:#25477B;display:flex}' +
+      '.hos-status-success{background:#E8F5ED;border:1px solid #A8D5B5;color:#1B5E30;display:flex}' +
+      '.hos-status-error{background:#FDECEB;border:1px solid #F5B5B1;color:#7B1008;display:flex}' +
+      '.hos-spinner{width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:hos-spin .6s linear infinite;flex-shrink:0}' +
+      '@keyframes hos-spin{to{transform:rotate(360deg)}}' +
+      '.hos-record-count{font-size:12px;color:#4E677E;font-style:italic}' +
+      '.hos-tabs{display:flex;gap:0;margin-bottom:-1px}' +
+      '.hos-tab{padding:9px 22px;border:1.5px solid #D9E1E8;border-bottom:none;background:#F2F5F7;color:#4E677E;cursor:pointer;font-size:13px;font-weight:600;border-radius:8px 8px 0 0;transition:background .15s;font-family:inherit}' +
+      '.hos-tab:hover{background:#E6EBEF}' +
+      '.hos-tab.active{background:#fff;color:#25477B;border-color:#D9E1E8;border-bottom-color:#fff}' +
+      '.hos-table-wrap{background:#fff;border:1.5px solid #D9E1E8;border-radius:0 8px 8px 8px;overflow:auto;max-height:calc(100vh - 300px)}' +
+      '.hos-table-note{padding:9px 16px;background:#FFF8E6;border-bottom:1px solid #FFE4A0;font-size:12px;color:#7A5A00}' +
+      '.hos-empty{padding:40px;text-align:center;color:#4E677E;font-style:italic}' +
+      '.hos-table{width:100%;border-collapse:collapse;font-size:12.5px}' +
+      '.hos-table thead{position:sticky;top:0;z-index:2}' +
+      '.hos-table th{background:#25477B;color:#fff;padding:10px 12px;text-align:left;font-weight:700;white-space:nowrap;border-right:1px solid #3a5a8f;font-family:inherit;font-size:12px;letter-spacing:.03em}' +
+      '.hos-table th:last-child{border-right:none}' +
+      '.hos-table td{padding:7px 12px;border-bottom:1px solid #F2F5F7;border-right:1px solid #E6EBEF;white-space:nowrap}' +
+      '.hos-table td:last-child{border-right:none}' +
+      '.hos-driver-shade{background:#F9FAFB}' +
+      '.hos-table tbody tr:hover{background:#EDF3FB}' +
+      '.hos-table .hos-num{text-align:center;font-variant-numeric:tabular-nums;font-family:"Courier New",monospace;font-size:12px}' +
+      '.hos-total{font-weight:700;color:#25477B}' +
+      '.hos-driver-cell{font-weight:600;color:#1F2833}' +
+      '.hos-date-link{color:#0069BF;text-decoration:none;border-bottom:1px dotted #0069BF}' +
+      '.hos-date-link:hover{color:#004f8f;border-bottom-style:solid}' +
+      '.hos-driver-dropdown{position:relative;display:inline-block}' +
+      '.hos-driver-btn{display:inline-flex!important;align-items:center!important;gap:6px!important;padding:7px 12px!important;border:1.5px solid #D9E1E8!important;border-radius:6px!important;background:#fff!important;color:#1F2833!important;font-size:13px!important;cursor:pointer!important;white-space:nowrap!important;font-weight:600!important;font-family:inherit!important}' +
+      '.hos-driver-btn:hover:not(:disabled){background:#F2F5F7!important;border-color:#C0CCD8!important}' +
+      '.hos-driver-btn::after{content:"\\25BE";font-size:11px;color:#8DA4B9;margin-left:2px}' +
+      '.hos-driver-btn:disabled{opacity:.4!important;cursor:not-allowed!important}' +
+      '.hos-driver-badge{background:#0069BF!important;color:#fff!important;font-size:11px!important;font-weight:700!important;border-radius:10px!important;padding:1px 7px!important;line-height:1.4!important}' +
+      '.hos-badge{display:inline-block;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700}' +
+      '.hos-badge-OFF{background:#E6EBEF;color:#3E5265}' +
+      '.hos-badge-SB{background:#EDE7F6;color:#4A235A}' +
+      '.hos-badge-D{background:#E8F5ED;color:#1B5E30}' +
+      '.hos-badge-ON{background:#FFF8E1;color:#7A5A00}' +
+      '.hos-badge-YM{background:#E0F7FA;color:#006064}' +
+      '.hos-badge-PC{background:#E6F0FA;color:#25477B}';
+    document.head.appendChild(s);
   }
 
   // ── Event wiring ───────────────────────────────────────────────────────────
