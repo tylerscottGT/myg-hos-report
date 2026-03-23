@@ -173,10 +173,20 @@
     .hos-driver-btn:focus { outline: none; border-color: #0075BE; box-shadow: 0 0 0 3px rgba(0,117,190,.12); }
     .hos-driver-btn:disabled { opacity: .4; cursor: not-allowed; }
     .hos-driver-panel {
-      position: absolute; top: calc(100% + 2px); left: 0; min-width: 220px; max-height: 260px;
-      overflow-y: auto; background: #fff; border: 1.5px solid #ced4da; border-radius: 6px;
+      position: absolute; top: calc(100% + 2px); left: 0; min-width: 240px;
+      display: flex; flex-direction: column; max-height: 300px;
+      background: #fff; border: 1.5px solid #ced4da; border-radius: 6px;
       box-shadow: 0 4px 14px rgba(0,0,0,.12); z-index: 200;
     }
+    .hos-driver-panel-hd {
+      flex-shrink: 0; padding: 8px 10px; border-bottom: 2px solid #dee2e6;
+    }
+    .hos-driver-search {
+      width: 100%; padding: 5px 8px; border: 1.5px solid #ced4da; border-radius: 4px;
+      font-size: 12.5px; outline: none; margin-bottom: 6px;
+    }
+    .hos-driver-search:focus { border-color: #0075BE; }
+    #hos-driver-list { overflow-y: auto; flex: 1; }
     .hos-driver-opt {
       display: flex; align-items: center; gap: 8px; padding: 7px 12px;
       cursor: pointer; font-size: 13px; user-select: none;
@@ -184,7 +194,7 @@
     .hos-driver-opt:not(:last-child) { border-bottom: 1px solid #f1f3f5; }
     .hos-driver-opt:hover { background: #f8f9fa; }
     .hos-driver-opt input { cursor: pointer; width: 14px; height: 14px; flex-shrink: 0; }
-    .hos-driver-opt-all { font-weight: 600; border-bottom: 2px solid #dee2e6 !important; }
+    .hos-driver-opt-all { font-weight: 600; }
 
     /* ── Status badges ── */
     .hos-badge { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; }
@@ -223,6 +233,10 @@
         <div class="hos-driver-dropdown" id="hos-driver-dropdown">
           <button id="hos-driver-btn" class="hos-driver-btn" disabled>Loading drivers&#8230;</button>
           <div id="hos-driver-panel" class="hos-driver-panel" style="display:none">
+            <div class="hos-driver-panel-hd">
+              <input type="text" id="hos-driver-search" class="hos-driver-search" placeholder="Search drivers&hellip;" autocomplete="off">
+              <label class="hos-driver-opt hos-driver-opt-all"><input type="checkbox" id="hos-chk-all" checked> All Drivers</label>
+            </div>
             <div id="hos-driver-list"></div>
           </div>
         </div>
@@ -756,7 +770,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
       return { id: id, name: driverMap[id].name };
     }).sort(function(a, b) { return a.name < b.name ? -1 : 1; });
 
-    var html = '<label class="hos-driver-opt hos-driver-opt-all"><input type="checkbox" id="hos-chk-all" checked> All Drivers</label>';
+    var html = '';
     drivers.forEach(function(d) {
       html += '<label class="hos-driver-opt"><input type="checkbox" class="hos-driver-chk" value="' + escHtml(d.name) + '" checked> ' + escHtml(d.name) + '</label>';
     });
@@ -807,6 +821,24 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     renderDetailTable(detailRows);
   }
 
+  function filterDriverList(query) {
+    var list = el('hos-driver-list');
+    if (!list) return;
+    var q = query.trim().toLowerCase();
+    list.querySelectorAll('.hos-driver-opt').forEach(function (opt) {
+      var val = (opt.querySelector('.hos-driver-chk') || {}).value || '';
+      opt.style.display = (!q || val.toLowerCase().indexOf(q) !== -1) ? '' : 'none';
+    });
+  }
+
+  function closeDriverPanel() {
+    var panel = el('hos-driver-panel');
+    if (!panel || panel.style.display === 'none') return;
+    panel.style.display = 'none';
+    var srch = el('hos-driver-search');
+    if (srch) { srch.value = ''; filterDriverList(''); }
+  }
+
   // ── Event wiring ───────────────────────────────────────────────────────────
   function wireEvents() {
     el('hos-preset-select').addEventListener('change', function () { selectPreset(this.value); });
@@ -818,13 +850,16 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     el('hos-driver-btn').addEventListener('click', function (e) {
       e.stopPropagation();
       var panel = el('hos-driver-panel');
-      panel.style.display = panel.style.display === 'none' ? '' : 'none';
+      if (panel.style.display === 'none') {
+        panel.style.display = '';
+        el('hos-driver-search').focus();
+      } else {
+        closeDriverPanel();
+      }
     });
     el('hos-driver-panel').addEventListener('click', function (e) { e.stopPropagation(); });
-    document.addEventListener('click', function () {
-      var panel = el('hos-driver-panel');
-      if (panel) panel.style.display = 'none';
-    });
+    el('hos-driver-search').addEventListener('input', function () { filterDriverList(this.value); });
+    document.addEventListener('click', function () { closeDriverPanel(); });
     document.addEventListener('mousemove', function (e) {
       if (!resizeDragging || !resizeTh) return;
       resizeTh.style.width = Math.max(40, resizeStartW + e.clientX - resizeStartX) + 'px';
