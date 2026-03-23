@@ -426,8 +426,8 @@ window.geotab.addin.driverHOSReport = function (api, state) {
   // Fetch the 30 days before the period to seed carry-over statuses.
   // Returns: { driverId -> lastLogBeforePeriod } map.
   function fetchCarryOver(periodStart, callback) {
-    var from = addDays(periodStart, -30);
-    setStatus('loading', 'Fetching carry-over window (30 days prior)\u2026');
+    var from = addDays(periodStart, -90);
+    setStatus('loading', 'Fetching carry-over window (90 days prior)\u2026');
     api.call('Get', {
       typeName: 'DutyStatusLog',
       search: { fromDate: from.toISOString(), toDate: periodStart.toISOString() },
@@ -500,6 +500,23 @@ window.geotab.addin.driverHOSReport = function (api, state) {
         if (firstRealTime > range.start) {
           byDriver[dId].unshift(synthetic);
         }
+      }
+    });
+
+    // Ensure every active HOS driver appears in the output. Any driver in
+    // driverMap who is still absent from byDriver at this point had no logs
+    // in the report period AND nothing in the 90-day carry-over window.
+    // Seed them with a synthetic OFF entry so they are always visible —
+    // this catches drivers stuck in a forgotten ON Duty status whose last
+    // change was 90+ days ago, as well as anyone on extended leave.
+    Object.keys(driverMap).forEach(function (dId) {
+      if (!byDriver[dId]) {
+        byDriver[dId] = [{
+          driver: { id: dId },
+          dateTime: range.start.toISOString(),
+          status: 'OFF',
+          _synthetic: true
+        }];
       }
     });
 
