@@ -236,9 +236,11 @@ window.geotab.addin.driverHOSReport = function (api, state) {
 
   // Fetch the 30 days before the period to seed carry-over statuses.
   // Returns: { driverId -> lastLogBeforePeriod } map.
+  // 30-day window keeps the query safely under the 50k API result limit for
+  // large fleets. Any driver not found here falls back to OFF in processLogs.
   function fetchCarryOver(periodStart, callback) {
-    var from = addDays(periodStart, -90);
-    setStatus('loading', 'Fetching carry-over window (90 days prior)\u2026');
+    var from = addDays(periodStart, -30);
+    setStatus('loading', 'Fetching carry-over window (30 days prior)\u2026');
     api.call('Get', {
       typeName: 'DutyStatusLog',
       search: { fromDate: from.toISOString(), toDate: periodStart.toISOString() },
@@ -314,9 +316,27 @@ window.geotab.addin.driverHOSReport = function (api, state) {
       }
     });
 
+    // Fallback for drivers with in-period logs but no carry-over found
+    // (e.g. last status change was >30 days ago and the 50k limit was hit).
+    // If their first real log starts after range.start, fill the gap with OFF.
+    Object.keys(byDriver).forEach(function (dId) {
+      if (!driverMap[dId]) return;
+      if (carryOver[dId]) return; // already handled above
+      if (byDriver[dId][0] && byDriver[dId][0]._synthetic) return; // already seeded
+      var firstRealTime = new Date(byDriver[dId][0].dateTime);
+      if (firstRealTime > range.start) {
+        byDriver[dId].unshift({
+          driver: { id: dId },
+          dateTime: range.start.toISOString(),
+          status: 'OFF',
+          _synthetic: true
+        });
+      }
+    });
+
     // Ensure every active HOS driver appears in the output. Any driver in
     // driverMap who is still absent from byDriver at this point had no logs
-    // in the report period AND nothing in the 90-day carry-over window.
+    // in the report period AND nothing in the 30-day carry-over window.
     // Seed them with a synthetic OFF entry so they are always visible —
     // this catches drivers stuck in a forgotten ON Duty status whose last
     // change was 90+ days ago, as well as anyone on extended leave.
