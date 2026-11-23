@@ -13,6 +13,7 @@ test('v10 uses its own helper and only references the shared root spreadsheet li
 
   assert.match(page, /src="\.\/group-filter\.js\?v=10"/);
   assert.match(page, /src="\.\.\/xlsx\.full\.min\.js"/);
+  assert.match(page, /id="hos-tab-summary" class="hos-tab active">Daily Summary<\/button>/);
   assert.match(config.items[0].url, /\/v10\/index\.html\?v=10$/);
 });
 
@@ -20,4 +21,5 @@ test('the existing root v9 page is not wired to the new group-filter helper', fu
   var page = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   assert.doesNotMatch(page, /group-filter\.js/);
   assert.match(page, /src="\.\/xlsx\.full\.min\.js"/);
+  assert.match(page, /id="hos-tab-summary" class="hos-tab active">Weekly Summary<\/button>/);
 });
