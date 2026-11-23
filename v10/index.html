@@ -93,6 +93,7 @@ window.geotab.addin.driverHOSReport = function (api, state) {
   var UNIDENTIFIED  = 'Unidentified Driver';
   var RESULTS_LIMIT = 50000;
   var DRIVER_LIMIT  = 50000;
+  var BOUNDARY_RESULTS_LIMIT = 25000;
   var MONTH_NAMES   = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   var DAY_NAMES     = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
@@ -391,18 +392,25 @@ window.geotab.addin.driverHOSReport = function (api, state) {
     });
   }
 
-  // Fetch the 30 days before the period to seed carry-over statuses.
-  // Returns: { driverId -> lastLogBeforePeriod } map.
-  // 30-day window keeps the query safely under the 50k API result limit for
-  // large fleets. Any driver not found here falls back to OFF in processLogs.
+  // Fetch each driver's last log before the period start. A fixed lookback
+  // window can miss a status that remains active for longer than the window.
+  // MyGeotab's includeBoundaryLogs option returns the log immediately before
+  // fromDate without downloading the driver's full history.
   function fetchCarryOver(periodStart, callback) {
-    var from = addDays(periodStart, -30);
-    setStatus('loading', 'Fetching carry-over window (30 days prior)\u2026');
+    setStatus('loading', 'Fetching prior duty statuses\u2026');
     api.call('Get', {
       typeName: 'DutyStatusLog',
-      search: { fromDate: from.toISOString(), toDate: periodStart.toISOString() },
-      resultsLimit: 50000
+      search: {
+        fromDate: periodStart.toISOString(),
+        toDate: periodStart.toISOString(),
+        includeBoundaryLogs: true
+      },
+      resultsLimit: BOUNDARY_RESULTS_LIMIT
     }, function (results) {
+      if (!Array.isArray(results) || results.length >= BOUNDARY_RESULTS_LIMIT) {
+        callback('The MyGeotab boundary status list may be incomplete at the result limit.');
+        return;
+      }
       // Keep only the LAST log per driver (their status just before the period started)
       var lastByDriver = {};
       (results || []).forEach(function (log) {

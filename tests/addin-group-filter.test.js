@@ -116,6 +116,7 @@ test('the v10 add-in applies MyGeotab group changes to report tables and driver 
   var pendingGroupGets = [];
   var groupResultOverride = null;
   var hosLogGets = 0;
+  var boundaryStatusLog = null;
   var userResultOverride = null;
   var groupList = [
     { id: 'GroupCompanyId', name: 'Company', children: [{ id: 'north' }, { id: 'south' }] },
@@ -143,7 +144,13 @@ test('the v10 add-in applies MyGeotab group changes to report tables and driver 
         }
         success(groupResultOverride || groupList);
       } else {
-        if (params.typeName === 'DutyStatusLog') hosLogGets++;
+        if (params.typeName === 'DutyStatusLog') {
+          hosLogGets++;
+          if (params.search && params.search.includeBoundaryLogs) {
+            success(boundaryStatusLog ? [boundaryStatusLog] : []);
+            return;
+          }
+        }
         success([]);
       }
     },
@@ -183,8 +190,24 @@ test('the v10 add-in applies MyGeotab group changes to report tables and driver 
   assert.equal(element('hos-download-btn').disabled, true, 'changing the range invalidates the completed report');
   addin.focus(api, state);
   assert.equal(element('hos-download-btn').disabled, true, 'focus must not re-enable an export for the old range');
+  element('hos-preset-select').value = 'custom';
+  element('hos-preset-select').dispatch('change');
+  element('hos-start-date').value = '2026-11-16';
+  element('hos-end-date').value = '2026-11-22';
+  element('hos-apply-btn').dispatch('click');
+  boundaryStatusLog = {
+    driver: { id: 'north-driver' },
+    dateTime: '2026-07-01T00:00:00.000Z',
+    status: 'ON'
+  };
   element('hos-run-btn').dispatch('click');
   assert.equal(element('hos-download-btn').disabled, false);
+  var northRow = element('hos-summary-wrap').innerHTML.match(/<tr[^>]*><td class="hos-driver-cell">Driver, North<\/td>[\s\S]*?<\/tr>/)[0];
+  var northStatusCells = Array.from(northRow.matchAll(/<td class="hos-num[^\"]*">([\s\S]*?)<\/td>/g), function (match) { return match[1]; });
+  assert.equal(northStatusCells[0].includes('24:00'), false, 'a carried ON status must not be reported as OFF');
+  assert.equal(northStatusCells[3], '24:00', 'the last status before the report range must carry into it even when older than 30 days');
+  assert.equal(northStatusCells[6], '24:00', 'a stale ON status must fill each last-week day');
+  boundaryStatusLog = null;
 
   var northCheckbox = element('hos-driver-list').checkboxes[0];
   northCheckbox.checked = true;
